@@ -15,3 +15,4 @@ main :: proc() {
 		fmt.println("Good evening")
 	}
 }
+

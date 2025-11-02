@@ -3,7 +3,7 @@ package fizz
 import "core:fmt"
 
 main :: proc() {
-	num := 1
+	num := 15
 
 	if num > 15 {
 		fmt.println("Print too large")

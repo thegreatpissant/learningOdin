@@ -8,3 +8,4 @@ main :: proc() {
 	num2 += num1
 	fmt.printfln("%i + %i = %i", num1, num2, (num1 + num2))
 }
+
