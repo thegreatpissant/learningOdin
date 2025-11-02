@@ -10,7 +10,7 @@ main :: proc() {
 		os.exit(-1)
 	}
 
-	greeting := ""
+	greeting :string
 
 	h, _, _ := time.clock_from_time(time.now())
 	if h < 11 {
