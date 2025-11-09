@@ -8,7 +8,7 @@ import rl "vendor:raylib"
 main :: proc() {
 	name := "Hollope!"
 	if len(os.args) == 2 {
-		name = os.args[1][:len(os.args[1])-1]
+		name = os.args[1]
 	}
 	cname := strings.clone_to_cstring(name)
 
@@ -18,7 +18,7 @@ main :: proc() {
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
-		rl.DrawText(cname, 10, 10, 500, rl.VIOLET)
+		rl.DrawText(cname, 10, 10, 250, rl.VIOLET)
 		rl.EndDrawing()
 	}
 	rl.CloseWindow()
