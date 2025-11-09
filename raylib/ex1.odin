@@ -1,15 +1,24 @@
 package main
 
+import "core:fmt"
+import "core:os"
+import "core:strings"
 import rl "vendor:raylib"
 
 main :: proc() {
-	rl.InitWindow(1024, 768, "Hellope!")
+	name := "Hollope!"
+	if len(os.args) == 2 {
+		name = os.args[1][:len(os.args[1])-1]
+	}
+	cname := strings.clone_to_cstring(name)
+
+	rl.InitWindow(1024, 768, "Helloper")
 	rl.SetTargetFPS(60)
 
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
-		rl.DrawText("Hellope!", 10, 10, 500, rl.VIOLET)
+		rl.DrawText(cname, 10, 10, 500, rl.VIOLET)
 		rl.EndDrawing()
 	}
 	rl.CloseWindow()
