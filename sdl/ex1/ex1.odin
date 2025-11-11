@@ -1,4 +1,4 @@
-package main
+package _main
 
 import "core:log"
 import "core:math/rand"
@@ -16,7 +16,7 @@ renderRandomPoint :: proc( renderer:^sdl.Renderer)  {
     }
 }
 
-main :: proc() {
+_main :: proc() {
 	context.logger = log.create_console_logger()
 
 	ok := sdl.Init({.VIDEO})
