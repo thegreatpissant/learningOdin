@@ -1,6 +1,5 @@
 package hellosdl
 
-import "core:fmt"
 import "core:log"
 import sdl "vendor:sdl3"
 import strings "core:strings"
