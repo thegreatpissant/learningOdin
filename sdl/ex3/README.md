@@ -1,1 +1,1 @@
-Lazy Foo' Productions [Textures and Extension Libraries](https://lazyfoo.net/tutorials/SDL3/02-textures-and-extension-libraries/index.php)
+Lazy Foo' Productions [Key presses and Key states](https://lazyfoo.net/tutorials/SDL3/03-key-presses-and-key-states/index.php)

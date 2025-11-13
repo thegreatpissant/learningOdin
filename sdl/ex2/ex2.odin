@@ -1,103 +1,123 @@
-package hellosdl
+package sdl3Image
 
-import "core:log"
-import sdl "vendor:sdl3"
+import log "core:log"
 import strings "core:strings"
+import sdl "vendor:sdl3"
+import sdl_image "vendor:sdl3/image"
 
-gWindow : ^sdl.Window
-gSurface : ^sdl.Surface
-gWindow1 : ^sdl.Window
-gSurface1 : ^sdl.Surface
-gWindow2 : ^sdl.Window
-gSurface2 : ^sdl.Surface
-gHelloWorld : ^sdl.Surface
-
-WINDOW_WIDTH :: 400
-WINDOW_HEIGHT :: 400
-
-init :: proc() -> bool {
-
-    success := true
-
-    if !sdl.Init({sdl.InitFlag.VIDEO}) {
-        success = false
-        sdl.Log("Failed to initialize SDL %s\n", sdl.GetError())
-    }
-    return success
+Window :: struct {
+	window:   ^sdl.Window,
+	renderer: ^sdl.Renderer,
+	width:    i32,
+	height:   i32,
 }
 
-generateWindow :: proc (window: ^^sdl.Window, surface: ^^sdl.Surface, title: string) -> bool {
-    success := true
-    // Create window
-    windowTitle := strings.clone_to_cstring(strings.concatenate({"SDL tutorial: ", title}))
-    window^ = sdl.CreateWindow(windowTitle, WINDOW_WIDTH, WINDOW_HEIGHT, {})
-    if window^ == nil {
-        sdl.Log("Failed to create a window: %s", sdl.GetError())
-        success = false
-    } else {
-        surface^ = sdl.GetWindowSurface(window^)
-    }
-    return success
+App :: struct {
+	window: ^Window,
 }
 
-loadMedia :: proc() -> bool {
-    success := true
-    imagePath :cstring= "./images/hello-sdl3.bmp"
-    gHelloWorld = sdl.LoadBMP(imagePath)
-    if gHelloWorld == nil {
-        sdl.Log("Unable to load image %s : %s ", imagePath, sdl.GetError())
-        success = false
-    }
-    return success
+Texture :: struct {
+	texture: ^sdl.Texture,
+	width:   i32,
+	height:  i32,
 }
 
-close :: proc() {
-    sdl.DestroySurface(gHelloWorld)
-    gHelloWorld = nil
-    sdl.DestroyWindow(gWindow)
-    gWindow = nil
-    gSurface = nil
+initSDL :: proc() -> bool {
+	success := true
+	if !sdl.Init({sdl.InitFlag.VIDEO}) {
+		success = false
+		sdl.Log("Failed to initialize SDL: %s\n", sdl.GetError())
+	}
+	return success
+}
+
+generateWindow :: proc(title: string, width: i32, height: i32) -> (^Window, bool) {
+	success := true
+	window := new(Window)
+    window.width = width
+    window.height = height
+	windowTitle := strings.clone_to_cstring(title)
+	if !sdl.CreateWindowAndRenderer(windowTitle, width, height, {}, &window.window, &window.renderer) {
+		success = false
+		sdl.Log("Failed to create window: %s ", sdl.GetError())
+	}
+	return window, success
+}
+
+loadTexture :: proc(renderer: ^sdl.Renderer, location: string, texture: ^^Texture) -> bool {
+	destroyTexture(texture^)
+	filename := strings.clone_to_cstring(location)
+	tempSurface := sdl_image.Load(filename)
+	if tempSurface == nil {
+		sdl.Log("Failed to load image file \"%s\" : %s\n", filename, sdl.GetError())
+		return false
+	}
+
+	texture^.texture = sdl.CreateTextureFromSurface(renderer, tempSurface)
+	if texture^.texture == nil {
+		sdl.Log("Failed to create texture: %s\n", sdl.GetError())
+	}
+
+	texture^.width = tempSurface.w
+	texture^.height = tempSurface.h
+
+	sdl.DestroySurface(tempSurface)
+
+	return true
+}
+
+destroyTexture :: proc(texture: ^Texture) {
+	sdl.DestroyTexture(texture.texture)
+	texture.texture = nil
+	texture.width = 0
+	texture.height = 0
+}
+
+renderTexture :: proc(posX: f32, posY: f32, texture: ^Texture, window: ^Window) {
+	destinationRectangle := sdl.FRect{posX, posY, f32(window.width), f32(window.height)}
+	sdl.RenderTexture(window.renderer, texture.texture, nil, &destinationRectangle)
+}
+
+close :: proc(app: ^App) {
+    sdl.DestroyRenderer(app.window.renderer)
+    app.window.renderer = nil
+    sdl.DestroyWindow(app.window.window)
+    app.window.window = nil
     sdl.Quit()
 }
 
 main :: proc() {
-    context.logger = log.create_console_logger()
-    if !init() {
-        log.panicf("Failed to initialize SDL")
-    }
-    if !generateWindow(&gWindow, &gSurface, "Nearest") {
-        log.panic("Failed to generate window 0")
-    }
-    if !generateWindow(&gWindow1, &gSurface1, "Linear") {
-        log.panic("Failed to generate Window 1")
-    }
-    if !generateWindow(&gWindow2, &gSurface2, "PIXELART") {
-        log.panic("Failed to generate Window 1")
-    }
-    if !loadMedia() {
-        log.panic("Failed to load media")
-    }
-    event := new(sdl.Event)
-    quit := false
-    for quit == false {
-        sdl.zerop(event)
-        for sdl.PollEvent(event) == true {
-            if event.type == sdl.EventType.KEY_DOWN {
-                if event.key.scancode == sdl.Scancode.ESCAPE {
-                    sdl.Log("Quiting")
-                    quit = true
-                }
-            }
-        }
-        sdl.FillSurfaceRect(gSurface, nil, sdl.MapSurfaceRGB(gSurface, 0xFF, 0x00, 0x00))
-        sdl.FillSurfaceRect(gSurface1, nil, sdl.MapSurfaceRGB(gSurface, 0xFF, 0x00, 0x00))
-        sdl.FillSurfaceRect(gSurface2, nil, sdl.MapSurfaceRGB(gSurface, 0xFF, 0x00, 0x00))
-        sdl.BlitSurfaceScaled(gHelloWorld, nil, gSurface, nil, sdl.ScaleMode.NEAREST)
-        sdl.BlitSurfaceScaled(gHelloWorld, nil, gSurface1, nil, sdl.ScaleMode.LINEAR)
-        sdl.BlitSurfaceScaled(gHelloWorld, nil, gSurface2, nil, sdl.ScaleMode.INVALID)
-        sdl.UpdateWindowSurface(gWindow)
-        sdl.UpdateWindowSurface(gWindow1)
-        sdl.UpdateWindowSurface(gWindow2)
-    }
-    close()
+	if !initSDL() {
+		log.panic("Failed to initialize SDL")
+	}
+	app := App{}
+	window, ok := generateWindow("SDL ex 3", 700, 700)
+	if !ok {
+		log.panic("Failed to generate window")
+	}
+	app.window = window
+	pngTexture := new(Texture)
+	if !loadTexture(app.window.renderer, "./images/02-textures-and-extension-libraries/loaded.png", &pngTexture) {
+		log.info("Failed to laod the texture")
+	}
+	event := new(sdl.Event)
+	quit := false
+	for quit == false {
+		sdl.zerop(event)
+		for sdl.PollEvent(event) == true {
+			if event.type == sdl.EventType.KEY_DOWN {
+				if event.key.scancode == sdl.Scancode.ESCAPE {
+					sdl.Log("Quiting")
+					quit = true
+				}
+			}
+		}
+        sdl.SetRenderDrawColor(app.window.renderer, 0xFF, 0x00, 0xFF, 0xFF)
+        sdl.RenderClear(app.window.renderer)
+        renderTexture(0,0, pngTexture, app.window)
+        sdl.RenderPresent(app.window.renderer)
+	}
+    destroyTexture(pngTexture)
+	close(&app)
 }
+

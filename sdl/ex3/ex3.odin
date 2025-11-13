@@ -13,7 +13,14 @@ Window :: struct {
 }
 
 App :: struct {
-	window: ^Window,
+	window:          ^Window,
+	renderTexture:   ^Texture,
+	defaultTexture:  ^Texture,
+	upTexture:       ^Texture,
+	downTexture:     ^Texture,
+	leftTexture:     ^Texture,
+	rightTexture:    ^Texture,
+	backgroundColor: sdl.Color,
 }
 
 Texture :: struct {
@@ -34,8 +41,8 @@ initSDL :: proc() -> bool {
 generateWindow :: proc(title: string, width: i32, height: i32) -> (^Window, bool) {
 	success := true
 	window := new(Window)
-    window.width = width
-    window.height = height
+	window.width = width
+	window.height = height
 	windowTitle := strings.clone_to_cstring(title)
 	if !sdl.CreateWindowAndRenderer(windowTitle, width, height, {}, &window.window, &window.renderer) {
 		success = false
@@ -44,7 +51,8 @@ generateWindow :: proc(title: string, width: i32, height: i32) -> (^Window, bool
 	return window, success
 }
 
-loadTexture :: proc(renderer: ^sdl.Renderer, location: string, texture: ^^Texture) -> bool {
+loadTexture :: proc(app: ^App, location: string, texture: ^^Texture) -> bool {
+	renderer := app.window.renderer
 	destroyTexture(texture^)
 	filename := strings.clone_to_cstring(location)
 	tempSurface := sdl_image.Load(filename)
@@ -73,17 +81,47 @@ destroyTexture :: proc(texture: ^Texture) {
 	texture.height = 0
 }
 
-renderTexture :: proc(posX: f32, posY: f32, texture: ^Texture, window: ^Window) {
-	destinationRectangle := sdl.FRect{posX, posY, f32(window.width), f32(window.height)}
+RenderTexture :: proc(posX: f32, posY: f32, texture: ^Texture, window: ^Window) {
+	destinationRectangle := sdl.FRect{posX, posY, f32(texture.width), f32(texture.height)}
 	sdl.RenderTexture(window.renderer, texture.texture, nil, &destinationRectangle)
 }
 
 close :: proc(app: ^App) {
-    sdl.DestroyRenderer(app.window.renderer)
-    app.window.renderer = nil
-    sdl.DestroyWindow(app.window.window)
-    app.window.window = nil
-    sdl.Quit()
+	destroyTexture(app.defaultTexture)
+	destroyTexture(app.upTexture)
+	destroyTexture(app.downTexture)
+	destroyTexture(app.leftTexture)
+	destroyTexture(app.rightTexture)
+
+	sdl.DestroyRenderer(app.window.renderer)
+	app.window.renderer = nil
+	sdl.DestroyWindow(app.window.window)
+	app.window.window = nil
+	sdl.Quit()
+}
+
+loadMedia :: proc(app: ^App) {
+	app.defaultTexture = new(Texture)
+	if !loadTexture(app, "./images/02-textures-and-extension-libraries/loaded.png", &app.defaultTexture) {
+		log.info("Failed to laod the default texture")
+	}
+	app.rightTexture = new(Texture)
+	if !loadTexture(app, "./images/02-textures-and-extension-libraries/right.png", &app.rightTexture) {
+		log.info("Failed to laod the right texture")
+	}
+	app.leftTexture = new(Texture)
+	if !loadTexture(app, "./images/02-textures-and-extension-libraries/left.png", &app.leftTexture) {
+		log.info("Failed to laod the left texture")
+	}
+	app.upTexture = new(Texture)
+	if !loadTexture(app, "./images/02-textures-and-extension-libraries/up.png", &app.upTexture) {
+		log.info("Failed to laod the up texture")
+	}
+	app.downTexture = new(Texture)
+	if !loadTexture(app, "./images/02-textures-and-extension-libraries/down.png", &app.downTexture) {
+		log.info("Failed to laod the down texture")
+	}
+	app.renderTexture = app.defaultTexture
 }
 
 main :: proc() {
@@ -91,33 +129,81 @@ main :: proc() {
 		log.panic("Failed to initialize SDL")
 	}
 	app := App{}
-	window, ok := generateWindow("SDL ex 3", 700, 700)
+	window, ok := generateWindow("SDL ex 4", 640, 480)
 	if !ok {
 		log.panic("Failed to generate window")
 	}
 	app.window = window
-	pngTexture := new(Texture)
-	if !loadTexture(app.window.renderer, "./images/02-textures-and-extension-libraries/loaded.png", &pngTexture) {
-		log.info("Failed to laod the texture")
-	}
+	loadMedia(&app)
 	event := new(sdl.Event)
 	quit := false
 	for quit == false {
 		sdl.zerop(event)
 		for sdl.PollEvent(event) == true {
-			if event.type == sdl.EventType.KEY_DOWN {
-				if event.key.scancode == sdl.Scancode.ESCAPE {
+			app.backgroundColor = sdl.Color{0xff, 0xff, 0xff, 0xff}
+			if event.type == sdl.EventType.QUIT {
+				sdl.Log("Quiting application")
+				quit = true
+			} else if event.type == sdl.EventType.KEY_DOWN {
+				if event.key.key == sdl.K_ESCAPE {
 					sdl.Log("Quiting")
 					quit = true
+				} else if event.key.key == sdl.K_UP {
+					app.renderTexture = app.upTexture
+				} else if event.key.key == sdl.K_DOWN {
+					app.renderTexture = app.downTexture
+				} else if event.key.key == sdl.K_LEFT {
+					app.renderTexture = app.leftTexture
+				} else if event.key.key == sdl.K_RIGHT {
+					app.renderTexture = app.rightTexture
+				} else {
+					app.renderTexture = app.defaultTexture
+				}
+			} else if false && event.type == sdl.EventType.KEY_UP {
+				// Switch back to default texture when key is up.
+				if event.key.key == sdl.K_UP ||
+				   event.key.key == sdl.K_DOWN ||
+				   event.key.key == sdl.K_RIGHT ||
+				   event.key.key == sdl.K_LEFT {
+					app.renderTexture = app.defaultTexture
 				}
 			}
+			keyStates := sdl.GetKeyboardState(nil)
+			if keyStates[sdl.Scancode.UP] {
+				app.backgroundColor.r = 0xFF
+				app.backgroundColor.g = 0x00
+				app.backgroundColor.b = 0x00
+			} else if keyStates[sdl.Scancode.DOWN] {
+				app.backgroundColor.r = 0x00
+				app.backgroundColor.g = 0xFF
+				app.backgroundColor.b = 0x00
+			} else if keyStates[sdl.Scancode.LEFT] {
+				app.backgroundColor.r = 0xFF
+				app.backgroundColor.g = 0xFF
+				app.backgroundColor.b = 0x00
+			} else if keyStates[sdl.Scancode.RIGHT] {
+				app.backgroundColor.r = 0x00
+				app.backgroundColor.g = 0x00
+				app.backgroundColor.b = 0xFF
+			}
 		}
-        sdl.SetRenderDrawColor(app.window.renderer, 0xFF, 0x00, 0xFF, 0xFF)
-        sdl.RenderClear(app.window.renderer)
-        renderTexture(0,0, pngTexture, app.window)
-        sdl.RenderPresent(app.window.renderer)
+		sdl.SetRenderDrawColor(
+			app.window.renderer,
+			app.backgroundColor.r,
+			app.backgroundColor.g,
+			app.backgroundColor.b,
+			0xFF,
+		)
+		sdl.RenderClear(app.window.renderer)
+
+		RenderTexture(
+			f32((app.window.width - app.renderTexture.width)) * .5,
+			f32((app.window.height - app.renderTexture.height)) * .5,
+			app.renderTexture,
+			app.window,
+		)
+		sdl.RenderPresent(app.window.renderer)
 	}
-    destroyTexture(pngTexture)
 	close(&app)
 }
 
