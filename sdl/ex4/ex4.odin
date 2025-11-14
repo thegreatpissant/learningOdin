@@ -101,45 +101,38 @@ Cleanup :: proc(app: ^App) {
 	sdl.Quit()
 }
 
-LoadMedia :: proc(app: ^App) {
+LoadMedia :: proc(app: ^App) -> bool{
+    success := true
 	app.backgroundColor = sdl.Color{0xff, 0xff, 0xff, 0xff}
 
 	if !LoadTexture(app, "./images/02-textures-and-extension-libraries/foo.png", &app.characterTexture) {
-		log.info("Failed to laod the character \"foo\" texture")
+        success = false
+        log.info("Failed to laod the character \"foo\" texture")
 	}
 	if !LoadTexture(app, "./images/02-textures-and-extension-libraries/background.png", &app.backgroundTexture) {
-		log.info("Failed to laod the background texture")
+        success = false
+        log.info("Failed to laod the background texture")
 	}
 
 	app.characterPosX = 240
 	app.characterPosY = 190
+    return success
 }
-
-main :: proc() {
-	if !InitSDL() {
-		log.panic("Failed to initialize SDL")
-	}
-	app := App{}
-	window, ok := GenerateWindow("SDL ex 4", 640, 480)
-	if !ok {
-		log.panic("Failed to generate window")
-	}
-	app.window = window
-	LoadMedia(&app)
-	event := new(sdl.Event)
-	quit := false
-	for quit == false {
-		sdl.zerop(event)
-		for sdl.PollEvent(event) == true {
-			if event.type == sdl.EventType.QUIT {
-				sdl.Log("Quiting application")
-				quit = true
-			} else if event.type == sdl.EventType.KEY_DOWN {
-				if event.key.key == sdl.K_ESCAPE {
-					sdl.Log("Quiting")
-					quit = true
-				}
-			}
+Loop :: proc(app:^App) {
+    event := new(sdl.Event)
+    quit := false
+    for quit == false {
+        sdl.zerop(event)
+        for sdl.PollEvent(event) == true {
+            if event.type == sdl.EventType.QUIT {
+                sdl.Log("Quiting application")
+                quit = true
+            } else if event.type == sdl.EventType.KEY_DOWN {
+                if event.key.key == sdl.K_ESCAPE {
+                    sdl.Log("Quiting")
+                    quit = true
+                }
+            }
             keyStates := sdl.GetKeyboardState(nil)
             if keyStates[sdl.Scancode.RIGHT] {
                 app.characterPosX += 1
@@ -153,20 +146,39 @@ main :: proc() {
                     app.characterPosX = 0
                 }
             }
-		}
-		sdl.SetRenderDrawColor(
-			app.window.renderer,
-			app.backgroundColor.r,
-			app.backgroundColor.g,
-			app.backgroundColor.b,
-			0xFF,
-		)
-		sdl.RenderClear(app.window.renderer)
+        }
+        sdl.SetRenderDrawColor(
+        app.window.renderer,
+        app.backgroundColor.r,
+        app.backgroundColor.g,
+        app.backgroundColor.b,
+        0xFF,
+        )
+        sdl.RenderClear(app.window.renderer)
 
-		RenderTexture(0, 0, app.backgroundTexture, app.window)
-		RenderTexture(app.characterPosX, app.characterPosY, app.characterTexture, app.window)
-		sdl.RenderPresent(app.window.renderer)
-	}
-	Cleanup(&app)
+        RenderTexture(0, 0, app.backgroundTexture, app.window)
+        RenderTexture(app.characterPosX, app.characterPosY, app.characterTexture, app.window)
+        sdl.RenderPresent(app.window.renderer)
+    }
+}
+Init :: proc() -> ^App {
+    app := new(App)
+    if !InitSDL() {
+        log.panic("Failed to initialize SDL")
+    }
+    window, ok := GenerateWindow("SDL ex 4", 640, 480)
+    if !ok {
+        log.panic("Failed to generate window")
+    }
+    app.window = window
+    return app
 }
 
+main :: proc() {
+    app := Init()
+	if !LoadMedia(app) {
+        log.panic("Failed to load media")
+    }
+    Loop(app)
+	Cleanup(app)
+}
