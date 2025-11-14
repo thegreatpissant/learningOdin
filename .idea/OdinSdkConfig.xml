@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="com.lasagnerd.odin.settings.OdinSdkConfigPersistentState">
+    <option name="sdkPath" value="$USER_HOME$/opt/Odin" />
+    <option name="extraBuildFlags" value="-vet" />
+    <option name="semanticAnnotatorEnabled" value="true" />
+    <option name="odinCheckerEnabled" value="true" />
+    <option name="highlightUnknownReferencesEnabled" value="true" />
+    <option name="conditionalSymbolResolutionEnabled" value="false" />
+    <option name="cacheEnabled" value="false" />
+    <option name="useBuiltinFormatter" value="false" />
+    <option name="odinFmtPath" value="$USER_HOME$/opt/ols/odinfmt" />
+    <option name="odinFmtJsonPath" value="$USER_HOME$/opt/ols/odinfmt.json" />
+  </component>
+</project>
