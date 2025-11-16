@@ -1,0 +1,1 @@
+LazyFoo [Sprite Clipping](https://lazyfoo.net/tutorials/SDL3/05-sprite-clipping-and-stretching/index.php)
