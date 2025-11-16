@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:bytes"
 import "core:os"
 
+// https://forum.odin-lang.org/t/need-help-creating-a-test-case-for-a-bug-i-might-have-found-with-context-allocator/1373/1
 // if n < 0, no limit on the number of removals
 bytes_remove_string :: proc(b: []byte, key: string, n := 1) -> (output: []byte, was_allocation: bool) {
     return bytes.remove(b, transmute([]byte)key, n)
