@@ -97,7 +97,7 @@ main :: proc() {
 	}
 	app.window = window
 	pngTexture := new(Texture)
-	if !loadTexture(app.window.renderer, "./images/02-textures-and-extension-libraries/loaded.png", &pngTexture) {
+	if !loadTexture(app.window.renderer, "./assets/02-textures-and-extension-libraries/loaded.png", &pngTexture) {
 		log.info("Failed to laod the texture")
 	}
 	event := new(sdl.Event)

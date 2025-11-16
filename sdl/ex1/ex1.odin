@@ -42,7 +42,7 @@ generateWindow :: proc (window: ^^sdl.Window, surface: ^^sdl.Surface, title: str
 
 loadMedia :: proc() -> bool {
     success := true
-    imagePath :cstring= "./images/hello-sdl3.bmp"
+    imagePath :cstring= "./assets/hello-sdl3.bmp"
     gHelloWorld = sdl.LoadBMP(imagePath)
     if gHelloWorld == nil {
         sdl.Log("Unable to load image %s : %s ", imagePath, sdl.GetError())

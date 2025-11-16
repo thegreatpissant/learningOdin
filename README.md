@@ -3,3 +3,4 @@ Directories:
 * sdl : https://lazyfoo.net/tutorials/SDL3/index.php
 * scratch : Random items
 * runningTests : https://odin-lang.org/docs/testing/
+* assets : images and other items to use 

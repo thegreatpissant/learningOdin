@@ -102,23 +102,23 @@ close :: proc(app: ^App) {
 
 loadMedia :: proc(app: ^App) {
 	app.defaultTexture = new(Texture)
-	if !loadTexture(app, "./images/02-textures-and-extension-libraries/loaded.png", &app.defaultTexture) {
+	if !loadTexture(app, "./assets/02-textures-and-extension-libraries/loaded.png", &app.defaultTexture) {
 		log.info("Failed to laod the default texture")
 	}
 	app.rightTexture = new(Texture)
-	if !loadTexture(app, "./images/02-textures-and-extension-libraries/right.png", &app.rightTexture) {
+	if !loadTexture(app, "./assets/02-textures-and-extension-libraries/right.png", &app.rightTexture) {
 		log.info("Failed to laod the right texture")
 	}
 	app.leftTexture = new(Texture)
-	if !loadTexture(app, "./images/02-textures-and-extension-libraries/left.png", &app.leftTexture) {
+	if !loadTexture(app, "./assets/02-textures-and-extension-libraries/left.png", &app.leftTexture) {
 		log.info("Failed to laod the left texture")
 	}
 	app.upTexture = new(Texture)
-	if !loadTexture(app, "./images/02-textures-and-extension-libraries/up.png", &app.upTexture) {
+	if !loadTexture(app, "./assets/02-textures-and-extension-libraries/up.png", &app.upTexture) {
 		log.info("Failed to laod the up texture")
 	}
 	app.downTexture = new(Texture)
-	if !loadTexture(app, "./images/02-textures-and-extension-libraries/down.png", &app.downTexture) {
+	if !loadTexture(app, "./assets/02-textures-and-extension-libraries/down.png", &app.downTexture) {
 		log.info("Failed to laod the down texture")
 	}
 	app.renderTexture = app.defaultTexture

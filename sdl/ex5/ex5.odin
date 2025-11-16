@@ -111,11 +111,11 @@ LoadMedia :: proc(app: ^App) -> bool{
     success := true
     app.backgroundColor = sdl.Color{0xff, 0xff, 0xff, 0xff}
 
-    if !LoadTexture(app, "./images/02-textures-and-extension-libraries/foo.png", &app.characterTexture) {
+    if !LoadTexture(app, "./assets/02-textures-and-extension-libraries/foo.png", &app.characterTexture) {
         success = false
         log.info("Failed to laod the character \"foo\" texture")
     }
-    if !LoadTexture(app, "./images/02-textures-and-extension-libraries/background.png", &app.backgroundTexture) {
+    if !LoadTexture(app, "./assets/02-textures-and-extension-libraries/background.png", &app.backgroundTexture) {
         success = false
         log.info("Failed to laod the background texture")
     }
