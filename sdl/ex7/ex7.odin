@@ -1,4 +1,4 @@
-package ex6
+package ex7
 
 import log "core:log"
 import strings "core:strings"
@@ -18,8 +18,6 @@ App :: struct {
 	backgroundColor:  sdl.Color,
 	characterPosX:    f32,
 	characterPosY:    f32,
-	flipMode:         sdl.FlipMode,
-	degrees:          f64,
 }
 
 Texture :: struct {
@@ -27,6 +25,21 @@ Texture :: struct {
 	width:   i32,
 	height:  i32,
 }
+
+ColorChannel :: enum {
+	TextureRed,
+	TextureGreen,
+	TextureBlue,
+	TextureAlpha,
+	BackgroundRed,
+	BackgroundGreen,
+	BackgroundBlue,
+	Total,
+	Unknown,
+}
+ColorMagnitudeCount :: 3
+colorMagnitudes := [ColorMagnitudeCount]sdl.Uint8{0x00, 0x7f, 0xff}
+colorChannelsIndices := [ColorChannel.Total]sdl.Uint8{}
 
 InitSDL :: proc() -> bool {
 	success := true
@@ -79,6 +92,16 @@ LoadTexture :: proc(app: ^App, location: string, texture: ^^Texture) -> bool {
 	return true
 }
 
+SetTextureColor :: proc(texture: ^Texture, r, g, b: sdl.Uint8) {
+	sdl.SetTextureColorMod(texture.texture, r, g, b)
+}
+SetTextureAlpha :: proc(texture: ^Texture, alpha: sdl.Uint8) {
+	sdl.SetTextureAlphaMod(texture.texture, alpha)
+}
+SetTextureBlending :: proc(texture: ^Texture, blendMode: sdl.BlendMode) {
+	sdl.SetTextureBlendMode(texture.texture, blendMode)
+}
+
 DestroyTexture :: proc(texture: ^Texture) {
 	sdl.DestroyTexture(texture.texture)
 	texture.texture = nil
@@ -127,65 +150,97 @@ Cleanup :: proc(app: ^App) {
 LoadMedia :: proc(app: ^App) -> bool {
 	success := true
 	app.backgroundColor = sdl.Color{0xff, 0xff, 0xff, 0xff}
+	colorChannelsIndices[ColorChannel.TextureRed] = 2
+	colorChannelsIndices[ColorChannel.TextureGreen] = 2
+	colorChannelsIndices[ColorChannel.TextureBlue] = 2
+	colorChannelsIndices[ColorChannel.TextureAlpha] = 2
+	colorChannelsIndices[ColorChannel.BackgroundRed] = 2
+	colorChannelsIndices[ColorChannel.BackgroundGreen] = 2
+	colorChannelsIndices[ColorChannel.BackgroundBlue] = 2
 
-	if !LoadTexture(app, "./assets/02-textures-and-extension-libraries/arrow.png", &app.characterTexture) {
+	if !LoadTexture(app, "./assets/02-textures-and-extension-libraries/colors.png", &app.characterTexture) {
 		success = false
 		log.info("Failed to laod the character \"foo\" texture")
 	}
+	SetTextureBlending(app.characterTexture, {sdl.BlendMode.BLEND})
 
 	app.characterPosX = f32(app.window.width - app.characterTexture.width) * 0.5
 	app.characterPosY = f32(app.window.height - app.characterTexture.height) * 0.5
 	return success
 }
+
 Loop :: proc(app: ^App) {
 	event := new(sdl.Event)
 	quit := false
 	for quit == false {
 		sdl.zerop(event)
+		channelToUpdate: ColorChannel = ColorChannel.Unknown
 		for sdl.PollEvent(event) == true {
-			if event.type == sdl.EventType.QUIT {
-				sdl.Log("Quiting application")
+			#partial switch event.type {
+			case sdl.EventType.QUIT:
 				quit = true
-			} else if event.type == sdl.EventType.KEY_DOWN {
-				if event.key.key == sdl.K_ESCAPE {
+			case sdl.EventType.KEY_DOWN:
+				switch event.key.key {
+				case sdl.K_ESCAPE:
 					sdl.Log("Quiting")
 					quit = true
+				case sdl.K_A:
+					channelToUpdate = ColorChannel.TextureRed
+				case sdl.K_S:
+					channelToUpdate = ColorChannel.TextureGreen
+				case sdl.K_D:
+					channelToUpdate = ColorChannel.TextureBlue
+				case sdl.K_F:
+					channelToUpdate = ColorChannel.TextureAlpha
+				case sdl.K_Q:
+					channelToUpdate = ColorChannel.BackgroundRed
+				case sdl.K_W:
+					channelToUpdate = ColorChannel.BackgroundGreen
+				case sdl.K_E:
+					channelToUpdate = ColorChannel.BackgroundBlue
 				}
-				if event.key.key == sdl.K_LEFT {
-					app.degrees -= 36
-				}
-				if event.key.key == sdl.K_RIGHT {
-					app.degrees += 36
-				}
-                if event.key.key == sdl.K_1 {
-                    app.flipMode = sdl.FlipMode.HORIZONTAL
-                }
-                if event.key.key == sdl.K_2 {
-                    app.flipMode = sdl.FlipMode.NONE
-                }
-                if event.key.key == sdl.K_3 {
-                    app.flipMode = sdl.FlipMode.VERTICAL
-                }
 			}
+		}
+		if channelToUpdate != ColorChannel.Unknown {
+			sdl.Log("ColorChannel %d", channelToUpdate)
+			colorChannelsIndices[channelToUpdate] = colorChannelsIndices[channelToUpdate] + sdl.Uint8(1)
+			if colorChannelsIndices[channelToUpdate] >= ColorMagnitudeCount {
+				colorChannelsIndices[channelToUpdate] = sdl.Uint8(0)
+			}
+			sdl.Log(
+				"Texture - R:%d G:%d B:%d A:%d | Background - R:%d G:%d B:%d",
+				colorMagnitudes[colorChannelsIndices[ColorChannel.TextureRed]],
+				colorMagnitudes[colorChannelsIndices[ColorChannel.TextureGreen]],
+				colorMagnitudes[colorChannelsIndices[ColorChannel.TextureBlue]],
+				colorMagnitudes[colorChannelsIndices[ColorChannel.TextureAlpha]],
+				colorMagnitudes[colorChannelsIndices[ColorChannel.BackgroundRed]],
+				colorMagnitudes[colorChannelsIndices[ColorChannel.BackgroundGreen]],
+				colorMagnitudes[colorChannelsIndices[ColorChannel.BackgroundBlue]],
+			)
 		}
 		sdl.SetRenderDrawColor(
 			app.window.renderer,
-			app.backgroundColor.r,
-			app.backgroundColor.g,
-			app.backgroundColor.b,
+			colorMagnitudes[colorChannelsIndices[ColorChannel.BackgroundRed]],
+			colorMagnitudes[colorChannelsIndices[ColorChannel.BackgroundGreen]],
+			colorMagnitudes[colorChannelsIndices[ColorChannel.BackgroundBlue]],
 			0xFF,
 		)
 		sdl.RenderClear(app.window.renderer)
-
+		SetTextureColor(
+			app.characterTexture,
+			colorMagnitudes[colorChannelsIndices[ColorChannel.TextureRed]],
+			colorMagnitudes[colorChannelsIndices[ColorChannel.TextureGreen]],
+			colorMagnitudes[colorChannelsIndices[ColorChannel.TextureBlue]],
+		)
+		SetTextureAlpha(app.characterTexture, colorMagnitudes[colorChannelsIndices[ColorChannel.TextureAlpha]])
 		RenderTexture(
 			app.characterPosX,
 			app.characterPosY,
 			app.characterTexture,
 			nil,
 			app.window,
-			app.degrees,
+			0,
 			sdl.FPoint{f32(app.characterTexture.width / 2), f32(app.characterTexture.height / 2)},
-			app.flipMode,
 		)
 		sdl.RenderPresent(app.window.renderer)
 	}
@@ -195,7 +250,7 @@ Init :: proc() -> ^App {
 	if !InitSDL() {
 		log.panic("Failed to initialize SDL")
 	}
-	window, ok := GenerateWindow("SDL ex 6", 640, 480)
+	window, ok := GenerateWindow("SDL ex 7", 640, 480)
 	if !ok {
 		log.panic("Failed to generate window")
 	}

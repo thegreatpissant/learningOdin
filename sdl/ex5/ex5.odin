@@ -172,7 +172,7 @@ Init :: proc() -> ^App {
     if !InitSDL() {
         log.panic("Failed to initialize SDL")
     }
-    window, ok := GenerateWindow("SDL ex 4", 640, 480)
+    window, ok := GenerateWindow("SDL ex 5", 640, 480)
     if !ok {
         log.panic("Failed to generate window")
     }
