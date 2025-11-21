@@ -68,24 +68,24 @@ TextureFromText :: proc(app: ^App, text: string, color: sdl.Color, texture: ^^Te
 	if texture^ == nil {
 		texture^ = new(Texture)
 	}
-    renderer := app.window.renderer
+	renderer := app.window.renderer
 	DestroyTexture(texture^)
 
-    textSurface : ^sdl.Surface = sdl_ttf.RenderText_Blended( app.font, strings.clone_to_cstring(text), 0, color)
-    if textSurface == nil {
-        sdl.Log("Unable to render text surface! sdl_ttf Error: %s\n", sdl.GetError())
-        return false
-    }
-    texture^.width = textSurface.w
-    texture^.height = textSurface.h
+	textSurface: ^sdl.Surface = sdl_ttf.RenderText_Blended(app.font, strings.clone_to_cstring(text), 0, color)
+	if textSurface == nil {
+		sdl.Log("Unable to render text surface! sdl_ttf Error: %s\n", sdl.GetError())
+		return false
+	}
+	texture^.width = textSurface.w
+	texture^.height = textSurface.h
 
-    texture^.texture = sdl.CreateTextureFromSurface(renderer, textSurface)
-    sdl.DestroySurface(textSurface)
+	texture^.texture = sdl.CreateTextureFromSurface(renderer, textSurface)
+	sdl.DestroySurface(textSurface)
 
-    if texture^.texture == nil {
-        sdl.Log("Failed to create texture from rendered text! sdl error: %s\n", sdl.GetError())
-        return false
-    }
+	if texture^.texture == nil {
+		sdl.Log("Failed to create texture from rendered text! sdl error: %s\n", sdl.GetError())
+		return false
+	}
 
 	return true
 }
@@ -101,15 +101,15 @@ LoadTexture :: proc(app: ^App, location: string, texture: ^^Texture) -> bool {
 		sdl.Log("Failed to load image file \"%s\" : %s\n", filename, sdl.GetError())
 		return false
 	}
-    texture^.width = tempSurface.w
-    texture^.height = tempSurface.h
+	texture^.width = tempSurface.w
+	texture^.height = tempSurface.h
 
 	if !sdl.SetSurfaceColorKey(tempSurface, true, sdl.MapSurfaceRGB(tempSurface, 0x00, 0xFF, 0xFF)) {
 		sdl.Log("Failed to set surface color key: %s", sdl.GetError())
 		return false
 	}
 	texture^.texture = sdl.CreateTextureFromSurface(renderer, tempSurface)
-    sdl.DestroySurface(tempSurface)
+	sdl.DestroySurface(tempSurface)
 
 	if texture^.texture == nil {
 		sdl.Log("Failed to create texture: %s\n", sdl.GetError())
@@ -166,15 +166,15 @@ RenderTexture :: proc(
 Cleanup :: proc(app: ^App) {
 	DestroyTexture(app.textTexture)
 
-    sdl_ttf.CloseFont(app.font)
-    app.font = nil
+	sdl_ttf.CloseFont(app.font)
+	app.font = nil
 
 	sdl.DestroyRenderer(app.window.renderer)
 	app.window.renderer = nil
 	sdl.DestroyWindow(app.window.window)
 	app.window.window = nil
 	sdl_ttf.Quit()
-    sdl.Quit()
+	sdl.Quit()
 }
 
 LoadMedia :: proc(app: ^App) -> bool {
@@ -291,9 +291,9 @@ Init :: proc() -> ^App {
 	}
 	app.window = window
 
-    if !sdl_ttf.Init() {
-        log.panic("Failed to initialize sdl_ttf, ", sdl.GetError())
-    }
+	if !sdl_ttf.Init() {
+		log.panic("Failed to initialize sdl_ttf, ", sdl.GetError())
+	}
 	return app
 }
 
