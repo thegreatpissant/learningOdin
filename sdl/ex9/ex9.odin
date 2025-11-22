@@ -1,6 +1,5 @@
 package ex9
 
-import fmt "core:fmt"
 import log "core:log"
 import strings "core:strings"
 import sdl "vendor:sdl3"
@@ -74,28 +73,17 @@ InitSDL :: proc() -> bool {
 	return success
 }
 
-HandleButtonEvent :: proc(button: ^Button, event: ^sdl.Event) {
+HandleButtonEvent :: proc(button: ^Button, event: ^sdl.Event, position: ^Position) {
 	//  check if the event falls within the button
-	x: f32
-	y: f32
-	_ = sdl.GetMouseState(&x, &y)
-	fmt.printfln("x: %f, y: %f", x, y)
-	fmt.printfln(
-		"posX %f - %f, posY %f - %f",
-		button.posX,
-		button.posX + button.width,
-		button.posY,
-		button.posY + button.height,
-	)
-	if x > button.posX && x < button.posX + button.width && y > button.posY && y < button.posY + button.height {
+	if position.x > button.posX &&
+	   position.x < button.posX + button.width &&
+	   position.y > button.posY &&
+	   position.y < button.posY + button.height {
 		if event.type == sdl.EventType.MOUSE_BUTTON_DOWN {
-			fmt.printfln("Mouse Down")
 			button.state = ButtonState.MouseDown
 		} else if event.type == sdl.EventType.MOUSE_BUTTON_UP {
-			fmt.printfln("Mouse UP")
 			button.state = ButtonState.MouseUp
 		} else {
-			fmt.printfln("Mouse OVER")
 			button.state = ButtonState.MouseOver
 		}
 	} else {
@@ -220,7 +208,7 @@ RenderTexture :: proc(
 		dstRect.w = pDstRect.w
 	}
 
-    dstRect.x *= textureToScreenRatioWidth
+	dstRect.x *= textureToScreenRatioWidth
 	dstRect.w *= textureToScreenRatioWidth
 	dstRect.y *= textureToScreenRatioHeight
 	dstRect.h *= textureToScreenRatioHeight
@@ -239,6 +227,7 @@ Cleanup :: proc(app: ^App) {
 Loop :: proc(app: ^App) {
 	event := new(sdl.Event)
 	quit := false
+    buttonPosition := Position {}
 	for quit == false {
 		sdl.zerop(event)
 		for sdl.PollEvent(event) == true {
@@ -256,8 +245,13 @@ Loop :: proc(app: ^App) {
 			case sdl.EventType.MOUSE_BUTTON_DOWN:
 				fallthrough
 			case sdl.EventType.MOUSE_BUTTON_UP:
+				windowToAppRatioHeight := app.height / f32(app.window.height)
+				windowToAppRatioWidth := app.width / f32(app.window.width)
+				_ = sdl.GetMouseState(&buttonPosition.x, &buttonPosition.y)
+                buttonPosition.x *= windowToAppRatioWidth
+                buttonPosition.y *= windowToAppRatioHeight
 				for button in app.buttons {
-					HandleButtonEvent(button, event)
+					HandleButtonEvent(button, event, &buttonPosition)
 				}
 			}
 		}
@@ -290,8 +284,8 @@ LoadMedia :: proc(app: ^App) -> bool {
 	}
 	textureWidth := f32(app.buttonTexture.width)
 	textureHeight := f32(app.buttonTexture.height / i32(ButtonState.LENGTH))
-    app.width = textureWidth * 2
-    app.height = textureHeight * 2
+	app.width = textureWidth * 2
+	app.height = textureHeight * 2
 
 	cords := []Position{{0, 0}, {0, textureHeight}, {textureWidth, 0}, {textureWidth, textureHeight}}
 	for position in cords {
