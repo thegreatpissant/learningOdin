@@ -1,5 +1,6 @@
 package ex9
 
+import fmt "core:fmt"
 import log "core:log"
 import strings "core:strings"
 import sdl "vendor:sdl3"
@@ -39,6 +40,8 @@ App :: struct {
 	backgroundColor: sdl.Color,
 	buttons:         [dynamic]^Button,
 	buttonTexture:   ^Texture,
+	width:           f32,
+	height:          f32,
 }
 
 Texture :: struct {
@@ -73,26 +76,49 @@ InitSDL :: proc() -> bool {
 
 HandleButtonEvent :: proc(button: ^Button, event: ^sdl.Event) {
 	//  check if the event falls within the button
+	x: f32
+	y: f32
+	_ = sdl.GetMouseState(&x, &y)
+	fmt.printfln("x: %f, y: %f", x, y)
+	fmt.printfln(
+		"posX %f - %f, posY %f - %f",
+		button.posX,
+		button.posX + button.width,
+		button.posY,
+		button.posY + button.height,
+	)
+	if x > button.posX && x < button.posX + button.width && y > button.posY && y < button.posY + button.height {
+		if event.type == sdl.EventType.MOUSE_BUTTON_DOWN {
+			fmt.printfln("Mouse Down")
+			button.state = ButtonState.MouseDown
+		} else if event.type == sdl.EventType.MOUSE_BUTTON_UP {
+			fmt.printfln("Mouse UP")
+			button.state = ButtonState.MouseUp
+		} else {
+			fmt.printfln("Mouse OVER")
+			button.state = ButtonState.MouseOver
+		}
+	} else {
+		button.state = ButtonState.MouseOut
+	}
 
 	//  Check if the event acts on the button
 }
 RenderButton :: proc(app: ^App, button: ^Button) {
 	textureButtonHeight := f32(button.texture.height / i32(ButtonState.LENGTH))
 	textureButtonWidth := f32(button.texture.width)
-    textureToScreenRatioWidth :f32= f32(app.window.width) / (textureButtonWidth*2)
-    textureToScreenRatioHeight :f32= f32(app.window.height) / (textureButtonHeight*2)
 	renderRect := new(sdl.FRect)
 	renderRect.x = 0
 	renderRect.y = f32(button.state) * textureButtonHeight
 	renderRect.w = textureButtonWidth
 	renderRect.h = textureButtonHeight
 	destRect := new(sdl.FRect)
-	destRect.x = button.posX * textureToScreenRatioWidth
-	destRect.y = button.posY * textureToScreenRatioHeight
-    destRect.w = textureButtonWidth * textureToScreenRatioWidth
-    destRect.h = textureButtonHeight * textureToScreenRatioHeight
+	destRect.x = button.posX
+	destRect.y = button.posY
+	destRect.w = textureButtonWidth
+	destRect.h = textureButtonHeight
 
-	RenderTexture(button.posX*textureToScreenRatioWidth, button.posY*textureToScreenRatioHeight, button.texture, renderRect, destRect, app.window, 0, sdl.FPoint{0, 0})
+	RenderTexture(button.posX, button.posY, button.texture, renderRect, destRect, app, 0, sdl.FPoint{0, 0})
 }
 
 GenerateWindow :: proc(title: string, width: i32, height: i32) -> (^Window, bool) {
@@ -160,26 +186,46 @@ RenderTexture :: proc(
 	texture: ^Texture,
 	pSrcRect: ^sdl.FRect,
 	pDstRect: ^sdl.FRect,
-	window: ^Window,
+	app: ^App,
 	degrees: f64,
 	center: sdl.FPoint,
 	flipMode := sdl.FlipMode.NONE,
 ) {
-	srcRect: ^sdl.FRect
+	textureToScreenRatioWidth := f32(app.window.width) / app.width
+	textureToScreenRatioHeight := f32(app.window.height) / app.height
+
+	srcRect := new(sdl.FRect)
 	if pSrcRect == nil {
-		srcRect = &sdl.FRect{x = 0, y = 0, w = f32(texture.width), h = f32(texture.height)}
+		srcRect.x = 0
+		srcRect.y = 0
+		srcRect.h = f32(texture.width)
+		srcRect.w = f32(texture.height)
 	} else {
-		srcRect = pSrcRect
+		srcRect.x = pSrcRect.x
+		srcRect.y = pSrcRect.y
+		srcRect.h = pSrcRect.h
+		srcRect.w = pSrcRect.w
 	}
 
-	dstRect: ^sdl.FRect
+	dstRect := new(sdl.FRect)
 	if pDstRect == nil {
-		dstRect = &sdl.FRect{x = 0, y = 0, w = f32(texture.width), h = f32(texture.height)}
+		dstRect.x = 0
+		dstRect.y = 0
+		dstRect.h = f32(texture.width)
+		dstRect.w = f32(texture.height)
 	} else {
-		dstRect = pDstRect
+		dstRect.x = pDstRect.x
+		dstRect.y = pDstRect.y
+		dstRect.h = pDstRect.h
+		dstRect.w = pDstRect.w
 	}
 
-	sdl.RenderTextureRotated(window.renderer, texture.texture, srcRect, dstRect, degrees, center, flipMode)
+    dstRect.x *= textureToScreenRatioWidth
+	dstRect.w *= textureToScreenRatioWidth
+	dstRect.y *= textureToScreenRatioHeight
+	dstRect.h *= textureToScreenRatioHeight
+
+	sdl.RenderTextureRotated(app.window.renderer, texture.texture, srcRect, dstRect, degrees, center, flipMode)
 }
 
 Cleanup :: proc(app: ^App) {
@@ -205,6 +251,14 @@ Loop :: proc(app: ^App) {
 					sdl.Log("Quiting")
 					quit = true
 				}
+			case sdl.EventType.MOUSE_MOTION:
+				fallthrough
+			case sdl.EventType.MOUSE_BUTTON_DOWN:
+				fallthrough
+			case sdl.EventType.MOUSE_BUTTON_UP:
+				for button in app.buttons {
+					HandleButtonEvent(button, event)
+				}
 			}
 		}
 
@@ -221,8 +275,10 @@ NewButton :: proc(app: ^App, texture: ^Texture, x: f32, y: f32) -> ^Button {
 	button: ^Button = new(Button)
 	button.posX = x
 	button.posY = y
+	button.width = f32(texture.width)
+	button.height = f32(texture.height / i32(ButtonState.LENGTH))
 	button.state = ButtonState.MouseOut
-    button.texture = texture
+	button.texture = texture
 	return button
 }
 LoadMedia :: proc(app: ^App) -> bool {
@@ -232,8 +288,10 @@ LoadMedia :: proc(app: ^App) -> bool {
 		success = false
 		log.info("Failed to load button texture")
 	}
-    textureWidth := f32(app.buttonTexture.width)
-    textureHeight := f32(app.buttonTexture.height / i32(ButtonState.LENGTH))
+	textureWidth := f32(app.buttonTexture.width)
+	textureHeight := f32(app.buttonTexture.height / i32(ButtonState.LENGTH))
+    app.width = textureWidth * 2
+    app.height = textureHeight * 2
 
 	cords := []Position{{0, 0}, {0, textureHeight}, {textureWidth, 0}, {textureWidth, textureHeight}}
 	for position in cords {
@@ -247,6 +305,7 @@ LoadMedia :: proc(app: ^App) -> bool {
 
 Init :: proc() -> ^App {
 	app := new(App)
+
 	if !InitSDL() {
 		log.panic("Failed to initialize SDL")
 	}
