@@ -1,7 +1,9 @@
 package ex9
 
 import log "core:log"
+import mem "core:mem"
 import strings "core:strings"
+import fmt "core:fmt"
 import sdl "vendor:sdl3"
 import sdl_image "vendor:sdl3/image"
 
@@ -95,18 +97,18 @@ HandleButtonEvent :: proc(button: ^Button, event: ^sdl.Event, position: ^Positio
 RenderButton :: proc(app: ^App, button: ^Button) {
 	textureButtonHeight := f32(button.texture.height / i32(ButtonState.LENGTH))
 	textureButtonWidth := f32(button.texture.width)
-	renderRect := new(sdl.FRect)
+	renderRect: sdl.FRect
 	renderRect.x = 0
 	renderRect.y = f32(button.state) * textureButtonHeight
 	renderRect.w = textureButtonWidth
 	renderRect.h = textureButtonHeight
-	destRect := new(sdl.FRect)
+	destRect: sdl.FRect
 	destRect.x = button.posX
 	destRect.y = button.posY
 	destRect.w = textureButtonWidth
 	destRect.h = textureButtonHeight
 
-	RenderTexture(button.posX, button.posY, button.texture, renderRect, destRect, app, 0, sdl.FPoint{0, 0})
+	RenderTexture(button.posX, button.posY, button.texture, &renderRect, &destRect, app, 0, sdl.FPoint{0, 0})
 }
 
 GenerateWindow :: proc(title: string, width: i32, height: i32) -> (^Window, bool) {
@@ -115,6 +117,7 @@ GenerateWindow :: proc(title: string, width: i32, height: i32) -> (^Window, bool
 	window.width = width
 	window.height = height
 	windowTitle := strings.clone_to_cstring(title)
+	defer delete(windowTitle)
 	if !sdl.CreateWindowAndRenderer(windowTitle, width, height, {}, &window.window, &window.renderer) {
 		success = false
 		sdl.Log("Failed to create window: %s ", sdl.GetError())
@@ -129,6 +132,7 @@ LoadTexture :: proc(app: ^App, location: string, texture: ^^Texture) -> bool {
 	renderer := app.window.renderer
 	DestroyTexture(texture^)
 	filename := strings.clone_to_cstring(location)
+	defer delete(filename)
 	tempSurface := sdl_image.Load(filename)
 	if tempSurface == nil {
 		sdl.Log("Failed to load image file \"%s\" : %s\n", filename, sdl.GetError())
@@ -182,7 +186,7 @@ RenderTexture :: proc(
 	textureToScreenRatioWidth := f32(app.window.width) / app.width
 	textureToScreenRatioHeight := f32(app.window.height) / app.height
 
-	srcRect := new(sdl.FRect)
+	srcRect: sdl.FRect
 	if pSrcRect == nil {
 		srcRect.x = 0
 		srcRect.y = 0
@@ -195,7 +199,7 @@ RenderTexture :: proc(
 		srcRect.w = pSrcRect.w
 	}
 
-	dstRect := new(sdl.FRect)
+	dstRect: sdl.FRect
 	if pDstRect == nil {
 		dstRect.x = 0
 		dstRect.y = 0
@@ -213,24 +217,16 @@ RenderTexture :: proc(
 	dstRect.y *= textureToScreenRatioHeight
 	dstRect.h *= textureToScreenRatioHeight
 
-	sdl.RenderTextureRotated(app.window.renderer, texture.texture, srcRect, dstRect, degrees, center, flipMode)
-}
-
-Cleanup :: proc(app: ^App) {
-	sdl.DestroyRenderer(app.window.renderer)
-	app.window.renderer = nil
-	sdl.DestroyWindow(app.window.window)
-	app.window.window = nil
-	sdl.Quit()
+	sdl.RenderTextureRotated(app.window.renderer, texture.texture, &srcRect, &dstRect, degrees, center, flipMode)
 }
 
 Loop :: proc(app: ^App) {
-	event := new(sdl.Event)
+	event: sdl.Event
 	quit := false
-    buttonPosition := Position {}
+	buttonPosition := Position{}
 	for quit == false {
-		sdl.zerop(event)
-		for sdl.PollEvent(event) == true {
+		sdl.zerop(&event)
+		for sdl.PollEvent(&event) == true {
 			#partial switch event.type {
 			case sdl.EventType.QUIT:
 				quit = true
@@ -248,10 +244,10 @@ Loop :: proc(app: ^App) {
 				windowToAppRatioHeight := app.height / f32(app.window.height)
 				windowToAppRatioWidth := app.width / f32(app.window.width)
 				_ = sdl.GetMouseState(&buttonPosition.x, &buttonPosition.y)
-                buttonPosition.x *= windowToAppRatioWidth
-                buttonPosition.y *= windowToAppRatioHeight
+				buttonPosition.x *= windowToAppRatioWidth
+				buttonPosition.y *= windowToAppRatioHeight
 				for button in app.buttons {
-					HandleButtonEvent(button, event, &buttonPosition)
+					HandleButtonEvent(button, &event, &buttonPosition)
 				}
 			}
 		}
@@ -275,6 +271,25 @@ NewButton :: proc(app: ^App, texture: ^Texture, x: f32, y: f32) -> ^Button {
 	button.texture = texture
 	return button
 }
+
+CleanupMedia :: proc(app: ^App) {
+	DestroyTexture(app.buttonTexture)
+	free(app.buttonTexture)
+	for i := 0; i < len(app.buttons); i += 1 {
+		free(app.buttons[i])
+	}
+	delete(app.buttons)
+}
+
+Cleanup :: proc(app: ^App) {
+	CleanupMedia(app)
+	sdl.DestroyRenderer(app.window.renderer)
+	app.window.renderer = nil
+	sdl.DestroyWindow(app.window.window)
+	free(app.window)
+	free(app)
+}
+
 LoadMedia :: proc(app: ^App) -> bool {
 	success := true
 	app.backgroundColor = sdl.Color{0xff, 0xff, 0xff, 0xff}
@@ -313,11 +328,19 @@ Init :: proc() -> ^App {
 }
 
 main :: proc() {
+	track: mem.Tracking_Allocator
+	mem.tracking_allocator_init(&track, context.allocator)
+	defer mem.tracking_allocator_destroy(&track)
+	context.allocator = mem.tracking_allocator(&track)
 	app := Init()
 	if !LoadMedia(app) {
 		log.panic("Failed to load media")
 	}
 	Loop(app)
 	Cleanup(app)
+    for _, leak in track.allocation_map {
+        fmt.printf("%v leaked %m\n", leak.location, leak.size)
+    }
+	sdl.Quit()
 }
 
