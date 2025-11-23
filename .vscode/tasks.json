@@ -1,0 +1,31 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build ex9.odin (Debug)",
+            "type": "shell",
+            "command": "odin build ./sdl/ex9 -out:./bin/ex9_debug -debug -vet",
+            "group": "build",
+            "presentation": {
+                "reveal": "silent",
+                "clear": true
+            },
+            "problemMatcher": [
+                "$odin"
+            ]
+        },
+        {
+            "label": "Build ex9.odin ",
+            "type": "shell",
+            "command": "odin build ./sdl/ex9 -out:./bin/ex9 -vet",
+            "group": "build",
+            "presentation": {
+                "reveal": "silent",
+                "clear": true
+            },
+            "problemMatcher": [
+                "$odin"
+            ]
+        }
+    ]
+}
