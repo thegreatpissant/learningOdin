@@ -9,3 +9,4 @@
 | Color Modulation / Alpha | ex7     |
 | True Type Fonts          | ex8     |
 | Mouse Movements          | ex9     |
+| Timing                   | ex10    |
