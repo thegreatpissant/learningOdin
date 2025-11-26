@@ -1,4 +1,4 @@
-package ex10
+package scaffolding
 
 Timer :: struct {
 	startTime: u64,
