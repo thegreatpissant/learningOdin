@@ -20,8 +20,29 @@ App :: struct {
     backgroundColor: sdl.Color,
     width:           i32,
     height:          i32,
-    text:            ^Text,
+	gameState:		 GameState,
+	board: Board,
 }
+
+GameState :: enum { 
+	Start = 0,
+	Playing = 1,
+	End = 2,
+	UNKNOWN = 3,
+}
+
+// Each Cell
+Cell :: enum {
+	PLAYER_X = 0,
+	PLAYER_O = 1,
+	NONE,
+}
+
+Board :: struct {
+	board : [3][3]Cell,
+	texture : ^sdl.Texture
+}
+
 
 ColorChannel :: enum {
     TextureRed,

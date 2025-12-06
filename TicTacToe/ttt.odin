@@ -5,45 +5,46 @@ import "core:fmt"
 import "core:log"
 import "core:strings"
 import mem "core:mem"
-import scalfolding "scalfolding"
+import scaffolding "scaffolding"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
+CountDowner : u64
+CountTime : u64
+
+Winner : string
+
 // Text
-playerOneStart : ^scalfolding.Text
-playerTwoStart : ^scalfolding.Text
+gameName : ^scaffolding.Text
+startQuestion : ^scaffolding.Text
+playerOneStart : ^scaffolding.Text
+playerTwoStart : ^scaffolding.Text
+thankYouForPlaying : ^scaffolding.Text
 
-// Each Cell
-Cell :: enum {
-	PLAYER_X = 0,
-	PLAYER_O = 1,
-	NONE,
+InitGame :: proc(app:^scaffolding.App) { 
+	app.gameState = scaffolding.GameState.Start
+	InitBoard(app)
+	Winner = "None"
 }
 
-Board :: struct {
-	board : [3][3]Cell,
-	texture : ^sdl.Texture
-}
-
-board : Board
-
-InitBoard :: proc() { 
+InitBoard :: proc(app:^scaffolding.App) { 
 	for i in 0..<3 { 
 		for j in 0..<3 { 
-			board.board[i][j] = Cell.NONE
-		}
-	}
-}
-InitBoardRandomly :: proc() { 
-	cellA : []Cell = {Cell.PLAYER_X, Cell.PLAYER_O}
-	for i in 0..<3 { 
-		for j in 0..<3 { 
-			board.board[i][j] = rand.choice(cellA)
+			app.board.board[i][j] = scaffolding.Cell.NONE
 		}
 	}
 }
 
-RenderCell :: proc(renderer: ^sdl.Renderer, cell :^Cell, posx, posy, width, height :f32) {
+InitBoardRandomly :: proc(app:^scaffolding.App) { 
+	cellA : []scaffolding.Cell = {scaffolding.Cell.PLAYER_X, scaffolding.Cell.PLAYER_O}
+	for i in 0..<3 { 
+		for j in 0..<3 { 
+			app.board.board[i][j] = rand.choice(cellA)
+		}
+	}
+}
+
+RenderCell :: proc(renderer: ^sdl.Renderer, cell :^scaffolding.Cell, posx, posy, width, height :f32) {
 	#partial switch (cell^) {
 	case .PLAYER_X :
 		sdl.RenderLine(renderer, posx, posy, posx+width, posy+height)
@@ -65,7 +66,7 @@ RenderCell :: proc(renderer: ^sdl.Renderer, cell :^Cell, posx, posy, width, heig
 	}
 }
 
-RenderCells :: proc(app: ^scalfolding.App) { 
+RenderCells :: proc(app: ^scaffolding.App) { 
 	padding :f32= 20
 	sdl.SetRenderDrawColor(app.window.renderer, 0xff, 0x00, 0x00, 0xff)
 	width := f32(app.width / 3)
@@ -74,13 +75,13 @@ RenderCells :: proc(app: ^scalfolding.App) {
 		for j in 0..<3 {
 			posx := f32(i) * width + padding / 2
 			posy := f32(j) * height + padding / 2
-			RenderCell(app.window.renderer, &board.board[i][j], posx, posy, width - padding, height - padding)
+			RenderCell(app.window.renderer, &app.board.board[i][j], posx, posy, width - padding, height - padding)
 		}
 	}
 }
 
 
-RenderBoard :: proc(app: ^scalfolding.App) {
+RenderBoard :: proc(app: ^scaffolding.App) {
 	vert := f32(app.width / 3)
 	height := f32(app.height / 3)
 	sdl.SetRenderDrawColor(app.window.renderer, 0xff, 0x00, 0x00, 0xff)
@@ -93,15 +94,68 @@ RenderBoard :: proc(app: ^scalfolding.App) {
 	sdl.RenderLine(app.window.renderer,  0,  height*2, vert * 3, height*2)
 	}
 }
-Loop :: proc(app: ^scalfolding.App) {
+
+GameStart :: proc(app: ^scaffolding.App) { 
+	event: sdl.Event
+	quit := false
+
+	for quit == false { 
+		sdl.zerop(&event)
+		for sdl.PollEvent(&event) == true { 
+			#partial switch event.type { 
+			case sdl.EventType.QUIT:
+				app.gameState = scaffolding.GameState.UNKNOWN
+				quit = true
+			case sdl.EventType.KEY_DOWN:  
+				switch event.key.key { 
+				case sdl.K_N:
+					app.gameState = scaffolding.GameState.End
+					quit = true
+				case sdl.K_Y:
+					app.gameState = scaffolding.GameState.Playing
+					quit = true
+				}
+			}
+		}
+		sdl.SetRenderTarget(app.window.renderer, app.board.texture)
+		sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0xff)
+		sdl.RenderClear(app.window.renderer)
+
+		scaffolding.RenderText(app, gameName)
+
+		sdl.SetRenderTarget(app.window.renderer, nil)
+		sdl.RenderTexture(app.window.renderer, app.board.texture, nil, nil)
+		sdl.RenderPresent(app.window.renderer)
+	}
+}
+
+GameEnd :: proc(app: ^scaffolding.App) {
+	event: sdl.Event
+	quit := false
+	app.gameState = scaffolding.GameState.UNKNOWN
+
+	sdl.SetRenderTarget(app.window.renderer, app.board.texture)
+	sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0xff)
+	sdl.RenderClear(app.window.renderer)
+
+	scaffolding.RenderText(app, thankYouForPlaying)
+
+	sdl.SetRenderTarget(app.window.renderer, nil)
+	sdl.RenderTexture(app.window.renderer, app.board.texture, nil, nil)
+	sdl.RenderPresent(app.window.renderer)
+	sdl.Delay(2000)
+}
+
+GameRun :: proc(app: ^scaffolding.App) {
 	event: sdl.Event
 	quit := false
 
 	for quit == false {
-		sdl.zerop(&event)
+                sdl.zerop(&event)
 		for sdl.PollEvent(&event) == true {
 			#partial switch event.type {
 			case sdl.EventType.QUIT:
+				app.gameState = scaffolding.GameState.UNKNOWN
 				quit = true
 			case sdl.EventType.KEY_DOWN:
 				switch event.key.key {
@@ -109,24 +163,41 @@ Loop :: proc(app: ^scalfolding.App) {
 					fallthrough
 				case sdl.K_Q:
 					quit = true
-
+					app.gameState = scaffolding.GameState.End
 				}
 			}
-		}
-		//  Render the background
-		sdl.SetRenderTarget(app.window.renderer, board.texture)
+          }
+                //  Render the background
+		sdl.SetRenderTarget(app.window.renderer, app.board.texture)
 		sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0xff)
 		sdl.RenderClear(app.window.renderer)
 		RenderBoard(app)
 		RenderCells(app)
+		scaffolding.RenderText(app, playerOneStart)
 		sdl.SetRenderTarget(app.window.renderer, nil)
-		sdl.RenderTexture(app.window.renderer, board.texture, nil, nil)
+		sdl.RenderTexture(app.window.renderer, app.board.texture, nil, nil)
 		sdl.RenderPresent(app.window.renderer)
 	}
 }
-GenerateWindow :: proc(title: string, width: i32, height: i32) -> (^scalfolding.Window, bool) {
+
+Loop :: proc(app: ^scaffolding.App) { 
+	for { 
+	   switch app.gameState {
+	   case scaffolding.GameState.Start:
+		  GameStart(app)
+	   case scaffolding.GameState.Playing:
+		  GameRun(app)
+	   case scaffolding.GameState.End:
+		  GameEnd(app)
+	   case scaffolding.GameState.UNKNOWN:
+		  return 
+	   }
+	}
+}
+
+GenerateWindow :: proc(title: string, width: i32, height: i32) -> (^scaffolding.Window, bool) {
     success := true
-    window := new(scalfolding.Window)
+    window := new(scaffolding.Window)
     window.width = width
     window.height = height
     windowTitle := strings.clone_to_cstring(title)
@@ -138,7 +209,7 @@ GenerateWindow :: proc(title: string, width: i32, height: i32) -> (^scalfolding.
     return window, success
 }
 
-CreateTexture :: proc(app:^scalfolding.App, width, height :i32) -> ^sdl.Texture {
+CreateTexture :: proc(app:^scaffolding.App, width, height :i32) -> ^sdl.Texture {
 	return sdl.CreateTexture(app.window.renderer, sdl.PixelFormat.RGBA8888, sdl.TextureAccess.TARGET, width, height)
 }
 
@@ -150,12 +221,10 @@ main :: proc() {
 	context.allocator = mem.tracking_allocator(&track)
 
 	fmt.println("Running TicTacToe")
-	app := new(scalfolding.App)
+	app := new(scaffolding.App)
     app.height = 400
     app.width = 400
-	InitBoard()
-	// InitBoardRandomly()
-	//  Init
+
     fmt.println("Init SDL")
 	if !sdl.Init({sdl.InitFlag.VIDEO}) {
 		log.panicf("Failed to init SDL: %s", sdl.GetError())
@@ -163,7 +232,7 @@ main :: proc() {
     fmt.println("Init SDL ttf")
     sdl_ttf.Init()
     fmt.println("Load Fonts")
-	app.font = scalfolding.CreateFont("./assets/08-true-type-fonts/lazy.ttf", 28)
+	app.font = scaffolding.CreateFont("./assets/08-true-type-fonts/lazy.ttf", 28)
 	if app.font == nil {
 		log.panic("Failed to init SDL Font")
 	}
@@ -173,28 +242,56 @@ main :: proc() {
         log.panic("Failed to create window")
     }
     app.window = window
-	board.texture = CreateTexture(app, app.width, app.height)
-	playerOneStart = new(scalfolding.Text)
+
+	fmt.println("Init Game")
+	InitGame(app)
+
+	fmt.println("Setup text")
+	app.board.texture = CreateTexture(app, app.width, app.height)
+	
+	gameName = new(scaffolding.Text)
+	gameName.text = "Tic Tac Toe"
+	gameName.color = sdl.Color{  0xff, 0x00, 0xff, 0xff }
+	scaffolding.UpdateText(app, gameName)
+	startQuestion = new(scaffolding.Text)
+	startQuestion.text = "Start Game Y/N"
+	startQuestion.color = sdl.Color{  0xff, 0x00, 0x00, 0xff }
+	scaffolding.UpdateText(app, startQuestion)
+	playerOneStart = new(scaffolding.Text)
 	playerOneStart.text = "Player O start!"
 	playerOneStart.color = sdl.Color{ 0xff, 0x00, 0x00, 0xff}
-	scalfolding.UpdateText(app, playerOneStart)
-	playerTwoStart = new(scalfolding.Text)
+	scaffolding.UpdateText(app, playerOneStart)
+	playerTwoStart = new(scaffolding.Text)
 	playerTwoStart.text = "Player X start!"
 	playerTwoStart.color = sdl.Color{ 0xff, 0x00, 0x00, 0xff}
-	scalfolding.UpdateText(app, playerTwoStart)
+	scaffolding.UpdateText(app, playerTwoStart)
+	thankYouForPlaying = new(scaffolding.Text)
+	thankYouForPlaying.text = "Thank you for playing!"
+	thankYouForPlaying.color = sdl.Color{ 0xff, 0x00, 0x00, 0xff}
+	scaffolding.UpdateText(app, thankYouForPlaying)
+
 
     fmt.println("Loop")
     Loop(app)
     fmt.println("Deinit")
 	//  Deinit
-	scalfolding.DestroyTexture(playerOneStart.texture)
+	scaffolding.DestroyTexture(gameName.texture)
+	free(gameName.texture)
+	free(gameName)
+	scaffolding.DestroyTexture(startQuestion.texture)
+	free(startQuestion.texture)
+	free(startQuestion)	
+	scaffolding.DestroyTexture(playerOneStart.texture)
 	free(playerOneStart.texture)
 	free(playerOneStart)
-	scalfolding.DestroyTexture(playerTwoStart.texture)
+	scaffolding.DestroyTexture(playerTwoStart.texture)
 	free(playerTwoStart.texture)
 	free(playerTwoStart)
+	scaffolding.DestroyTexture(thankYouForPlaying.texture)
+	free(thankYouForPlaying.texture)
+	free(thankYouForPlaying)
 	sdl_ttf.CloseFont(app.font)
-	sdl.DestroyTexture(board.texture)
+	sdl.DestroyTexture(app.board.texture)
 	free(app.window)
 	free(app)
 	

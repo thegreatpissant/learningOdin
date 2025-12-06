@@ -54,17 +54,17 @@ CreateFont :: proc(fontPath: string, ptsize: f32) -> ^sdl_ttf.Font {
 
 RenderText :: proc(app: ^App, text: ^Text) {
 	RenderTexture(
-		app.text.texture,
-        sdl.FRect { 0, 0, f32(app.text.texture.width), f32(app.text.texture.height)},
+		text.texture,
+        sdl.FRect { 0, 0, f32(text.texture.width), f32(text.texture.height)},
 		sdl.FRect {
-			f32((app.width / 2) - app.text.texture.width / 2),
-			f32((app.height / 2) - app.text.texture.height / 2),
-			f32(app.text.texture.width),
-			f32(app.text.texture.height),
+			f32((app.width / 2) - text.texture.width / 2),
+			f32((app.height / 2) - text.texture.height / 2),
+			f32(text.texture.width),
+			f32(text.texture.height),
 		},
 		app,
 		0,
-		sdl.FPoint{f32(app.text.texture.width / 2), f32(app.text.texture.height / 2)},
+		sdl.FPoint{f32(text.texture.width / 2), f32(text.texture.height / 2)},
 	)
 }
 
