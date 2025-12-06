@@ -1,5 +1,6 @@
 package TicTacToe
 
+import rand "core:math/rand"
 import "core:fmt"
 import "core:log"
 import "core:strings"
@@ -11,7 +12,7 @@ import sdl_ttf "vendor:sdl3/ttf"
 // Each Cell
 Cell :: enum {
 	PLAYER_X = 0,
-	PLAYER_O,
+	PLAYER_O = 1,
 	NONE,
 }
 
@@ -22,17 +23,31 @@ Board :: struct {
 
 board : Board
 
+InitBoard :: proc() { 
+	cellA : []Cell = {Cell.PLAYER_X, Cell.PLAYER_O}
+	for i in 0..<3 { 
+		for j in 0..<3 { 
+			board.board[i][j] = rand.choice(cellA)
+		}
+	}
+}
+
 RenderCell :: proc(renderer: ^sdl.Renderer, cell :^Cell, posx, posy, width, height :f32) {
 	switch(cell^) {
 	case .PLAYER_X :
-		sdl.RenderLine(renderer, posx, posy, width, height)
-		sdl.RenderLine(renderer, width, posy, posx, height)
-		fallthrough
+		sdl.RenderLine(renderer, posx, posy, posx+width, posy+height)
+		sdl.RenderLine(renderer, posx, posy+height, posx+width, posy)
 	case .PLAYER_O :
-		for i in posx..<posx + width {
-			for j in posy..<posy+height {
-				if (i*i-posx) + (j*j-posy) < width * width {
+		posx := posx + width / 2
+		posy := posy + height / 2
+		for i in 0..<width/2 {
+			for j in 0..<height/2 { 
+				if (i*i) + (j*j) <= width/2 * width/2 && 
+				(i*i) + (j*j) >= (width-5)/2 * (width-5)/2 { 
 					sdl.RenderPoint(renderer, posx+i, posy+j)
+					sdl.RenderPoint(renderer, posx-i, posy-j)
+					sdl.RenderPoint(renderer, posx-i, posy+j)
+					sdl.RenderPoint(renderer, posx+i, posy-j)
 				}
 			}
 		}
@@ -41,15 +56,26 @@ RenderCell :: proc(renderer: ^sdl.Renderer, cell :^Cell, posx, posy, width, heig
 	}
 }
 
+RenderCells :: proc(app: ^scalfolding.App) { 
+	padding :f32= 20
+	sdl.SetRenderDrawColor(app.window.renderer, 0xff, 0x00, 0x00, 0xff)
+	width := f32(app.width / 3)
+	height := f32(app.height / 3)
+	for i in 0..<3 {
+		for j in 0..<3 {
+			posx := f32(i) * width + padding / 2
+			posy := f32(j) * height + padding / 2
+			RenderCell(app.window.renderer, &board.board[i][j], posx, posy, width - padding, height - padding)
+		}
+	}
+}
+
+
 RenderBoard :: proc(app: ^scalfolding.App) {
-	//  Render the background
-	sdl.SetRenderTarget(app.window.renderer, board.texture)
-	sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0xff)
-	sdl.RenderClear(app.window.renderer)
 	vert := f32(app.width / 3)
 	height := f32(app.height / 3)
 	sdl.SetRenderDrawColor(app.window.renderer, 0xff, 0x00, 0x00, 0xff)
-	if false {
+	if true {
 	//  Vertical lines
 	sdl.RenderLine(app.window.renderer,  vert, 0,  vert,  height * 3)
 	sdl.RenderLine(app.window.renderer,  vert*2, 0,  vert*2,  height * 3)
@@ -57,17 +83,7 @@ RenderBoard :: proc(app: ^scalfolding.App) {
 	sdl.RenderLine(app.window.renderer,  0,  height, vert * 3, height)
 	sdl.RenderLine(app.window.renderer,  0,  height*2, vert * 3, height*2)
 	}
-	//  Render the cells
-	for i in 0..<3 {
-		for j in 0..<3 {
-			posx :f32= f32(i) * height
-			posy :f32= f32(j) * vert
-			RenderCell(app.window.renderer, &board.board[i][j], posx, posy, vert, height)
-		}
-	}
-	sdl.SetRenderTarget(app.window.renderer, nil)
 }
-
 Loop :: proc(app: ^scalfolding.App) {
 	event: sdl.Event
 	quit := false
@@ -81,11 +97,20 @@ Loop :: proc(app: ^scalfolding.App) {
 			case sdl.EventType.KEY_DOWN:
 				switch event.key.key {
 				case sdl.K_ESCAPE:
+					fallthrough
+				case sdl.K_Q:
 					quit = true
+
 				}
 			}
 		}
+		//  Render the background
+		sdl.SetRenderTarget(app.window.renderer, board.texture)
+		sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0xff)
+		sdl.RenderClear(app.window.renderer)
 		RenderBoard(app)
+		RenderCells(app)
+		sdl.SetRenderTarget(app.window.renderer, nil)
 		sdl.RenderTexture(app.window.renderer, board.texture, nil, nil)
 		sdl.RenderPresent(app.window.renderer)
 	}
@@ -119,6 +144,7 @@ main :: proc() {
 	app := new(scalfolding.App)
     app.height = 400
     app.width = 400
+	InitBoard()
 	//  Init
     fmt.println("Init SDL")
 	if !sdl.Init({sdl.InitFlag.VIDEO}) {
