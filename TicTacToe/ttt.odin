@@ -9,6 +9,10 @@ import scalfolding "scalfolding"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
+// Text
+playerOneStart : ^scalfolding.Text
+playerTwoStart : ^scalfolding.Text
+
 // Each Cell
 Cell :: enum {
 	PLAYER_X = 0,
@@ -24,6 +28,13 @@ Board :: struct {
 board : Board
 
 InitBoard :: proc() { 
+	for i in 0..<3 { 
+		for j in 0..<3 { 
+			board.board[i][j] = Cell.NONE
+		}
+	}
+}
+InitBoardRandomly :: proc() { 
 	cellA : []Cell = {Cell.PLAYER_X, Cell.PLAYER_O}
 	for i in 0..<3 { 
 		for j in 0..<3 { 
@@ -33,7 +44,7 @@ InitBoard :: proc() {
 }
 
 RenderCell :: proc(renderer: ^sdl.Renderer, cell :^Cell, posx, posy, width, height :f32) {
-	switch(cell^) {
+	#partial switch (cell^) {
 	case .PLAYER_X :
 		sdl.RenderLine(renderer, posx, posy, posx+width, posy+height)
 		sdl.RenderLine(renderer, posx, posy+height, posx+width, posy)
@@ -51,8 +62,6 @@ RenderCell :: proc(renderer: ^sdl.Renderer, cell :^Cell, posx, posy, width, heig
 				}
 			}
 		}
-	case .NONE :
-		fmt.print('*')
 	}
 }
 
@@ -145,6 +154,7 @@ main :: proc() {
     app.height = 400
     app.width = 400
 	InitBoard()
+	// InitBoardRandomly()
 	//  Init
     fmt.println("Init SDL")
 	if !sdl.Init({sdl.InitFlag.VIDEO}) {
@@ -164,11 +174,25 @@ main :: proc() {
     }
     app.window = window
 	board.texture = CreateTexture(app, app.width, app.height)
+	playerOneStart = new(scalfolding.Text)
+	playerOneStart.text = "Player O start!"
+	playerOneStart.color = sdl.Color{ 0xff, 0x00, 0x00, 0xff}
+	scalfolding.UpdateText(app, playerOneStart)
+	playerTwoStart = new(scalfolding.Text)
+	playerTwoStart.text = "Player X start!"
+	playerTwoStart.color = sdl.Color{ 0xff, 0x00, 0x00, 0xff}
+	scalfolding.UpdateText(app, playerTwoStart)
 
     fmt.println("Loop")
     Loop(app)
     fmt.println("Deinit")
 	//  Deinit
+	scalfolding.DestroyTexture(playerOneStart.texture)
+	free(playerOneStart.texture)
+	free(playerOneStart)
+	scalfolding.DestroyTexture(playerTwoStart.texture)
+	free(playerTwoStart.texture)
+	free(playerTwoStart)
 	sdl_ttf.CloseFont(app.font)
 	sdl.DestroyTexture(board.texture)
 	free(app.window)
