@@ -54,7 +54,7 @@ RenderCell :: proc(
 	cell: ^scaffolding.Cell,
 	posx, posy, width, height: f32,
 ) {
-	dstRect := sdl.FRect{posx, posy, width, height}
+	dstRect := sdl.FRect{posx, posy, width * 1.5, height * 1.5}
 	#partial switch (cell^) {
 	case .PLAYER_X:
 		srcRect := sdl.FRect{0, 0, f32(xTexture.w), f32(xTexture.h)}
@@ -86,6 +86,7 @@ RenderCells :: proc(app: ^scaffolding.App) {
 }
 
 RenderBoard :: proc(app: ^scaffolding.App) {
+	sdl.SetRenderDrawColor(app.window.renderer, 0xff, 0x00, 0x00, 0xff)
 	vert := f32(app.width / 3)
 	height := f32(app.height / 3)
 	if true {
@@ -234,19 +235,24 @@ GenerateWindow :: proc(
 }
 CreateXTexture :: proc(app: ^scaffolding.App) -> ^sdl.Texture {
 	xTexture := CreateTexture(app, app.width / 3, app.height / 3)
+	sdl.SetTextureBlendMode(xTexture, {sdl.BlendMode.BLEND})
 	sdl.SetRenderTarget(app.window.renderer, xTexture)
-	sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0xff)
+	sdl.SetRenderDrawBlendMode(app.window.renderer, {sdl.BlendMode.BLEND})
+	sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0x00)
 	sdl.RenderClear(app.window.renderer)
 	sdl.SetRenderDrawColor(app.window.renderer, 0xff, 0x00, 0x00, 0xff)
 	sdl.RenderLine(app.window.renderer, 0, 0, f32(xTexture.w), f32(xTexture.h))
 	sdl.RenderLine(app.window.renderer, f32(xTexture.w), 0, 0, f32(xTexture.h))
+	sdl.SetRenderTarget(app.window.renderer, nil)
 	return xTexture
 }
 
 CreateOTexture :: proc(app: ^scaffolding.App) -> ^sdl.Texture {
 	oTexture := CreateTexture(app, app.width / 3, app.height / 3)
+	sdl.SetTextureBlendMode(oTexture, {sdl.BlendMode.BLEND})
 	sdl.SetRenderTarget(app.window.renderer, oTexture)
-	sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0xff)
+	sdl.SetRenderDrawBlendMode(app.window.renderer, {sdl.BlendMode.BLEND})
+	sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0x00)
 	sdl.RenderClear(app.window.renderer)
 	sdl.SetRenderDrawColor(app.window.renderer, 0xff, 0x00, 0x00, 0xff)
 
@@ -281,6 +287,7 @@ CreateOTexture :: proc(app: ^scaffolding.App) -> ^sdl.Texture {
 			}
 		}
 	}
+	sdl.SetRenderTarget(app.window.renderer, nil)
 	return oTexture
 }
 
