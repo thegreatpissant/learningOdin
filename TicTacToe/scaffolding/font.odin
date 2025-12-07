@@ -22,19 +22,33 @@ UpdateText :: proc(app: ^App, textBox: ^Text) -> bool {
 	ctext := strings.clone_to_cstring(textBox.text)
 	defer delete(ctext)
 
-	textSurface: ^sdl.Surface = sdl_ttf.RenderText_Blended(app.font, ctext, 0, textBox.color)
+	textSurface: ^sdl.Surface = sdl_ttf.RenderText_Blended(
+		app.font,
+		ctext,
+		0,
+		textBox.color,
+	)
 	if textSurface == nil {
-		sdl.Log("Unable to render text surface! sdl_ttf Error: %s\n", sdl.GetError())
+		sdl.Log(
+			"Unable to render text surface! sdl_ttf Error: %s\n",
+			sdl.GetError(),
+		)
 		return false
 	}
 	textBox.texture.width = textSurface.w
 	textBox.texture.height = textSurface.h
 
-	textBox.texture.texture = sdl.CreateTextureFromSurface(renderer, textSurface)
+	textBox.texture.texture = sdl.CreateTextureFromSurface(
+		renderer,
+		textSurface,
+	)
 	sdl.DestroySurface(textSurface)
 
 	if textBox.texture.texture == nil {
-		sdl.Log("Failed to create texture from rendered text! sdl error: %s\n", sdl.GetError())
+		sdl.Log(
+			"Failed to create texture from rendered text! sdl error: %s\n",
+			sdl.GetError(),
+		)
 		return false
 	}
 
@@ -52,19 +66,24 @@ CreateFont :: proc(fontPath: string, ptsize: f32) -> ^sdl_ttf.Font {
 	return font
 }
 
-RenderText :: proc(app: ^App, text: ^Text) {
+RenderText :: proc(app: ^App, text: ^Text, dstPoint: ^Position = nil) {
+	destinationRect: sdl.FRect
+	destinationRect.w = f32(text.texture.width)
+	destinationRect.h = f32(text.texture.height)
+
+	if dstPoint == nil {
+		destinationRect.x = f32((app.width / 2) - text.texture.width / 2)
+		destinationRect.y = f32((app.height / 2) - text.texture.height / 2)
+	} else {
+		destinationRect.x = dstPoint.x
+		destinationRect.y = dstPoint.y
+	}
 	RenderTexture(
 		text.texture,
-        sdl.FRect { 0, 0, f32(text.texture.width), f32(text.texture.height)},
-		sdl.FRect {
-			f32((app.width / 2) - text.texture.width / 2),
-			f32((app.height / 2) - text.texture.height / 2),
-			f32(text.texture.width),
-			f32(text.texture.height),
-		},
+		sdl.FRect{0, 0, f32(text.texture.width), f32(text.texture.height)},
+		destinationRect,
 		app,
 		0,
 		sdl.FPoint{f32(text.texture.width / 2), f32(text.texture.height / 2)},
 	)
 }
-

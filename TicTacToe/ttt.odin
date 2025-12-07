@@ -17,16 +17,18 @@ Winner: string
 // Text
 gameName: ^scaffolding.Text
 startQuestion: ^scaffolding.Text
-playerOneStart: ^scaffolding.Text
-playerTwoStart: ^scaffolding.Text
+playerX: ^scaffolding.Text
+playerO: ^scaffolding.Text
+pressAnyKeyToPlay: ^scaffolding.Text
 thankYouForPlaying: ^scaffolding.Text
 oTexture: ^sdl.Texture
 xTexture: ^sdl.Texture
 
 InitGame :: proc(app: ^scaffolding.App) {
 	app.gameState = scaffolding.GameState.Start
-	InitBoardRandomly(app)
+	InitBoard(app)
 	Winner = "None"
+	app.currentPlayer = scaffolding.Cell.PLAYER_X
 }
 
 InitBoard :: proc(app: ^scaffolding.App) {
@@ -54,7 +56,7 @@ RenderCell :: proc(
 	cell: ^scaffolding.Cell,
 	posx, posy, width, height: f32,
 ) {
-	dstRect := sdl.FRect{posx, posy, width * 1.5, height * 1.5}
+	dstRect := sdl.FRect{posx, posy, width, height}
 	#partial switch (cell^) {
 	case .PLAYER_X:
 		srcRect := sdl.FRect{0, 0, f32(xTexture.w), f32(xTexture.h)}
@@ -118,20 +120,32 @@ GameStart :: proc(app: ^scaffolding.App) {
 				quit = true
 			case sdl.EventType.KEY_DOWN:
 				switch event.key.key {
-				case sdl.K_N:
-					app.gameState = scaffolding.GameState.End
+				case sdl.K_ESCAPE:
+					app.gameState = scaffolding.GameState.UNKNOWN
 					quit = true
-				case sdl.K_Y:
+				case:
 					app.gameState = scaffolding.GameState.Playing
 					quit = true
 				}
+			case sdl.EventType.MOUSE_BUTTON_DOWN:
+				app.gameState = scaffolding.GameState.Playing
+				quit = true
 			}
 		}
 		sdl.SetRenderTarget(app.window.renderer, app.board.texture)
 		sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0xff)
 		sdl.RenderClear(app.window.renderer)
 
-		scaffolding.RenderText(app, gameName)
+		scaffolding.RenderText(
+			app,
+			gameName,
+			&scaffolding.Position {
+				f32(app.width / 2 - gameName.texture.width / 2),
+				f32(app.height / 3 - gameName.texture.height),
+			},
+		)
+		scaffolding.RenderText(app, pressAnyKeyToPlay)
+		//  Or Change to Y/N as buttons for mouse support.
 
 		sdl.SetRenderTarget(app.window.renderer, nil)
 		sdl.RenderTexture(app.window.renderer, app.board.texture, nil, nil)
@@ -159,7 +173,7 @@ GameEnd :: proc(app: ^scaffolding.App) {
 GameRun :: proc(app: ^scaffolding.App) {
 	event: sdl.Event
 	quit := false
-
+	buttonPosition := scaffolding.Position{}
 	for quit == false {
 		sdl.zerop(&event)
 		for sdl.PollEvent(&event) == true {
@@ -175,6 +189,23 @@ GameRun :: proc(app: ^scaffolding.App) {
 					quit = true
 					app.gameState = scaffolding.GameState.End
 				}
+			case sdl.EventType.MOUSE_BUTTON_DOWN:
+				_ = sdl.GetMouseState(&buttonPosition.x, &buttonPosition.y)
+				//  Calculate the cell position
+				x := i32(buttonPosition.x) / (app.width / 3)
+				y := i32(buttonPosition.y) / (app.height / 3)
+				//  Can Player make a move?
+				if app.board.board[x][y] == scaffolding.Cell.NONE {
+					app.board.board[x][y] = app.currentPlayer
+					//  Check for a win
+					//  If so, end the game
+					//  Switch to the other player
+					if app.currentPlayer == scaffolding.Cell.PLAYER_X {
+						app.currentPlayer = scaffolding.Cell.PLAYER_O
+					} else {
+						app.currentPlayer = scaffolding.Cell.PLAYER_X
+					}
+				}
 			}
 		}
 		//  Blit the board to the texture
@@ -183,7 +214,12 @@ GameRun :: proc(app: ^scaffolding.App) {
 		sdl.RenderClear(app.window.renderer)
 		RenderBoard(app)
 		RenderCells(app)
-		scaffolding.RenderText(app, playerOneStart)
+		#partial switch app.currentPlayer {
+		case scaffolding.Cell.PLAYER_X:
+			scaffolding.RenderText(app, playerX)
+		case scaffolding.Cell.PLAYER_O:
+			scaffolding.RenderText(app, playerO)
+		}
 		//  Blit the board to the window
 		sdl.SetRenderTarget(app.window.renderer, nil)
 		sdl.RenderTexture(app.window.renderer, app.board.texture, nil, nil)
@@ -351,18 +387,22 @@ main :: proc() {
 	startQuestion.text = "Start Game Y/N"
 	startQuestion.color = sdl.Color{0xff, 0x00, 0x00, 0xff}
 	scaffolding.UpdateText(app, startQuestion)
-	playerOneStart = new(scaffolding.Text)
-	playerOneStart.text = "Player O start!"
-	playerOneStart.color = sdl.Color{0xff, 0x00, 0x00, 0xff}
-	scaffolding.UpdateText(app, playerOneStart)
-	playerTwoStart = new(scaffolding.Text)
-	playerTwoStart.text = "Player X start!"
-	playerTwoStart.color = sdl.Color{0xff, 0x00, 0x00, 0xff}
-	scaffolding.UpdateText(app, playerTwoStart)
+	playerX = new(scaffolding.Text)
+	playerX.text = "Player X"
+	playerX.color = sdl.Color{0xff, 0x00, 0x00, 0xff}
+	scaffolding.UpdateText(app, playerX)
+	playerO = new(scaffolding.Text)
+	playerO.text = "Player O"
+	playerO.color = sdl.Color{0xff, 0x00, 0x00, 0xff}
+	scaffolding.UpdateText(app, playerO)
 	thankYouForPlaying = new(scaffolding.Text)
 	thankYouForPlaying.text = "Thank you for playing!"
 	thankYouForPlaying.color = sdl.Color{0xff, 0x00, 0x00, 0xff}
 	scaffolding.UpdateText(app, thankYouForPlaying)
+	pressAnyKeyToPlay = new(scaffolding.Text)
+	pressAnyKeyToPlay.text = "Press any key to play"
+	pressAnyKeyToPlay.color = sdl.Color{0xff, 0x00, 0x00, 0xff}
+	scaffolding.UpdateText(app, pressAnyKeyToPlay)
 	oTexture = CreateOTexture(app)
 	if oTexture == nil {
 		log.panic("Failed to create O texture")
@@ -382,12 +422,15 @@ main :: proc() {
 	scaffolding.DestroyTexture(startQuestion.texture)
 	free(startQuestion.texture)
 	free(startQuestion)
-	scaffolding.DestroyTexture(playerOneStart.texture)
-	free(playerOneStart.texture)
-	free(playerOneStart)
-	scaffolding.DestroyTexture(playerTwoStart.texture)
-	free(playerTwoStart.texture)
-	free(playerTwoStart)
+	scaffolding.DestroyTexture(playerX.texture)
+	free(playerX.texture)
+	free(playerX)
+	scaffolding.DestroyTexture(playerO.texture)
+	free(playerO.texture)
+	free(playerO)
+	scaffolding.DestroyTexture(pressAnyKeyToPlay.texture)
+	free(pressAnyKeyToPlay.texture)
+	free(pressAnyKeyToPlay)
 	scaffolding.DestroyTexture(thankYouForPlaying.texture)
 	free(thankYouForPlaying.texture)
 	free(thankYouForPlaying)
