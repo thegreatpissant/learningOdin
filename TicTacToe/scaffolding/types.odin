@@ -23,6 +23,7 @@ App :: struct {
 	gameState:       GameState,
 	board:           Board,
 	currentPlayer:   Cell,
+	winner:			 Cell,
 }
 
 GameState :: enum {
@@ -36,6 +37,7 @@ GameState :: enum {
 Cell :: enum {
 	PLAYER_X = 0,
 	PLAYER_O = 1,
+	STALEMATE = 2,
 	NONE,
 }
 

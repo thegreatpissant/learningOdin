@@ -12,8 +12,6 @@ import sdl_ttf "vendor:sdl3/ttf"
 CountDowner: u64
 CountTime: u64
 
-Winner: string
-
 // Text
 gameName: ^scaffolding.Text
 startQuestion: ^scaffolding.Text
@@ -21,14 +19,17 @@ playerX: ^scaffolding.Text
 playerO: ^scaffolding.Text
 pressAnyKeyToPlay: ^scaffolding.Text
 thankYouForPlaying: ^scaffolding.Text
+playerXWins: ^scaffolding.Text
+playerOWins: ^scaffolding.Text
+noPlayerWins: ^scaffolding.Text
 oTexture: ^sdl.Texture
 xTexture: ^sdl.Texture
 
 InitGame :: proc(app: ^scaffolding.App) {
 	app.gameState = scaffolding.GameState.Start
 	InitBoard(app)
-	Winner = "None"
 	app.currentPlayer = scaffolding.Cell.PLAYER_X
+	app.winner = scaffolding.Cell.NONE
 }
 
 InitBoard :: proc(app: ^scaffolding.App) {
@@ -162,6 +163,27 @@ GameEnd :: proc(app: ^scaffolding.App) {
 	sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0xff)
 	sdl.RenderClear(app.window.renderer)
 
+	if app.winner == scaffolding.Cell.PLAYER_X { 
+		scaffolding.RenderText(app, playerXWins,
+			&scaffolding.Position {
+				f32(app.width / 2 - gameName.texture.width / 2),
+				f32(app.height / 3 - gameName.texture.height),
+			}
+			)
+	} else if app.winner == scaffolding.Cell.PLAYER_O { 
+		scaffolding.RenderText(app, playerOWins,
+			&scaffolding.Position {
+				f32(app.width / 2 - gameName.texture.width / 2),
+				f32(app.height / 3 - gameName.texture.height),
+			}
+			)
+	} else if app.winner == scaffolding.Cell.STALEMATE { 
+		scaffolding.RenderText(app, noPlayerWins,
+			&scaffolding.Position {
+				f32(app.width / 2 - gameName.texture.width / 2),
+				f32(app.height / 3 - gameName.texture.height),
+			})
+	}
 	scaffolding.RenderText(app, thankYouForPlaying)
 
 	sdl.SetRenderTarget(app.window.renderer, nil)
@@ -170,6 +192,48 @@ GameEnd :: proc(app: ^scaffolding.App) {
 	sdl.Delay(2000)
 }
 
+CheckWinner :: proc(app: ^scaffolding.App) -> bool { 
+	// 3 in a row
+	for i in 0..<3 { 
+		if app.board.board[i][0] == app.board.board[i][1] && 
+			app.board.board[i][0] == app.board.board[i][2] { 
+			app.winner =  app.board.board[i][0]
+			break
+		}
+	}
+	// 3 in a col
+	for j in 0..<3 { 
+		if app.board.board[0][j] == app.board.board[1][j] && 
+			app.board.board[0][j] == app.board.board[2][j] { 
+			app.winner =  app.board.board[0][j]
+			break
+		}
+	}
+	// \ diag
+	if app.board.board[0][0] == app.board.board[1][1] && 
+		app.board.board[0][0] == app.board.board[2][2] { 
+		app.winner = app.board.board[0][0]
+	}
+	// / diag
+	if app.board.board[2][0] == app.board.board[1][1] && 
+		app.board.board[2][0] == app.board.board[0][2] { 
+		app.winner =  app.board.board[2][0]
+	}
+	if app.winner != scaffolding.Cell.NONE { 
+		return true
+	}
+	//  Moves left?
+	for i in app.board.board { 
+		for j in i { 
+			if j == scaffolding.Cell.NONE { 
+				return false
+			}
+		}
+	}
+	// No moves left, stalemate
+	app.winner = scaffolding.Cell.STALEMATE
+	return true
+}
 GameRun :: proc(app: ^scaffolding.App) {
 	event: sdl.Event
 	quit := false
@@ -198,7 +262,10 @@ GameRun :: proc(app: ^scaffolding.App) {
 				if app.board.board[x][y] == scaffolding.Cell.NONE {
 					app.board.board[x][y] = app.currentPlayer
 					//  Check for a win
-					//  If so, end the game
+					if CheckWinner(app) { 
+						quit = true
+						app.gameState = scaffolding.GameState.End
+					}
 					//  Switch to the other player
 					if app.currentPlayer == scaffolding.Cell.PLAYER_X {
 						app.currentPlayer = scaffolding.Cell.PLAYER_O
@@ -247,8 +314,8 @@ GenerateWindow :: proc(
 	width: i32,
 	height: i32,
 ) -> (
-	^scaffolding.Window,
-	bool,
+^scaffolding.Window,
+bool,
 ) {
 	success := true
 	window := new(scaffolding.Window)
@@ -299,32 +366,32 @@ CreateOTexture :: proc(app: ^scaffolding.App) -> ^sdl.Texture {
 	for i in 0 ..< width / 2 {
 		for j in 0 ..< height / 2 {
 			if (i * i) + (j * j) <= width / 2 * width / 2 &&
-			   (i * i) + (j * j) >= (width - 5) / 2 * (width - 5) / 2 {
-				sdl.RenderPoint(
-					app.window.renderer,
-					f32(posx + i),
-					f32(posy + j),
-				)
-				sdl.RenderPoint(
-					app.window.renderer,
-					f32(posx - i),
-					f32(posy - j),
-				)
-				sdl.RenderPoint(
-					app.window.renderer,
-					f32(posx - i),
-					f32(posy + j),
-				)
-				sdl.RenderPoint(
-					app.window.renderer,
-					f32(posx + i),
-					f32(posy - j),
-				)
+				(i * i) + (j * j) >= (width - 5) / 2 * (width - 5) / 2 {
+					sdl.RenderPoint(
+						app.window.renderer,
+						f32(posx + i),
+						f32(posy + j),
+					)
+					sdl.RenderPoint(
+						app.window.renderer,
+						f32(posx - i),
+						f32(posy - j),
+					)
+					sdl.RenderPoint(
+						app.window.renderer,
+						f32(posx - i),
+						f32(posy + j),
+					)
+					sdl.RenderPoint(
+						app.window.renderer,
+						f32(posx + i),
+						f32(posy - j),
+					)
+				}
 			}
 		}
-	}
-	sdl.SetRenderTarget(app.window.renderer, nil)
-	return oTexture
+		sdl.SetRenderTarget(app.window.renderer, nil)
+		return oTexture
 }
 
 CreateTexture :: proc(
@@ -403,6 +470,18 @@ main :: proc() {
 	pressAnyKeyToPlay.text = "Press any key to play"
 	pressAnyKeyToPlay.color = sdl.Color{0xff, 0x00, 0x00, 0xff}
 	scaffolding.UpdateText(app, pressAnyKeyToPlay)
+	playerXWins = new(scaffolding.Text)
+	playerXWins.text = "Player X Wins!"
+	playerXWins.color = sdl.Color{0xff, 0x00, 0x00, 0xff}
+	scaffolding.UpdateText(app, playerXWins)
+	playerOWins = new(scaffolding.Text)
+	playerOWins.text = "Player O Wins!"
+	playerOWins.color = sdl.Color{0xff, 0x00, 0x00, 0xff}
+	scaffolding.UpdateText(app, playerOWins)
+	noPlayerWins = new(scaffolding.Text)
+	noPlayerWins.text = "Stalemate"
+	noPlayerWins.color = sdl.Color{0xff, 0x00, 0x00, 0xff}
+	scaffolding.UpdateText(app, noPlayerWins)
 	oTexture = CreateOTexture(app)
 	if oTexture == nil {
 		log.panic("Failed to create O texture")
@@ -434,6 +513,15 @@ main :: proc() {
 	scaffolding.DestroyTexture(thankYouForPlaying.texture)
 	free(thankYouForPlaying.texture)
 	free(thankYouForPlaying)
+	scaffolding.DestroyTexture(playerOWins.texture)
+	free(playerOWins.texture)
+	free(playerOWins)
+	scaffolding.DestroyTexture(playerXWins.texture)
+	free(playerXWins.texture)
+	free(playerXWins)
+	scaffolding.DestroyTexture(noPlayerWins.texture)
+	free(noPlayerWins.texture)
+	free(noPlayerWins)
 	sdl_ttf.CloseFont(app.font)
 	sdl.DestroyTexture(app.board.texture)
 	free(app.window)
