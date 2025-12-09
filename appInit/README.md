@@ -6,12 +6,8 @@ From
 https://wiki.libsdl.org/SDL3/NonstandardStartup#if-you-cant-include-sdl3sdl_mainh)
 
 Reference for the function signatures:
-
-[AppInit_func](https://pkg.odin-lang.org/vendor/sdl3/#AppInit_func)
-
-[AppIterate_func](https://pkg.odin-lang.org/vendor/sdl3/#AppIterate_func)
-
-[AppQuit_func](https://pkg.odin-lang.org/vendor/sdl3/#AppQuit_func)
-
-[AppEvent_func](https://pkg.odin-lang.org/vendor/sdl3/#AppEvent_func)
+- [AppInit_func](https://pkg.odin-lang.org/vendor/sdl3/#AppInit_func)
+- [AppIterate_func](https://pkg.odin-lang.org/vendor/sdl3/#AppIterate_func)
+- [AppQuit_func](https://pkg.odin-lang.org/vendor/sdl3/#AppQuit_func)
+- [AppEvent_func](https://pkg.odin-lang.org/vendor/sdl3/#AppEvent_func)
 
