@@ -1,7 +1,6 @@
 From 
 
 [Starting up SDL in Unusual Ways](https://wiki.libsdl.org/SDL3/NonstandardStartup), base the structure on
-
 [If you can't include SDL3/SDL_main.h](
 https://wiki.libsdl.org/SDL3/NonstandardStartup#if-you-cant-include-sdl3sdl_mainh)
 
