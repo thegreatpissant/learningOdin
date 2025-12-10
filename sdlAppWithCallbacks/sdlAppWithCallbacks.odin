@@ -1,6 +1,6 @@
 package appInit
 
-import "core:log"
+import "core:fmt"
 import "base:runtime"
 import sdl "vendor:sdl3"
 
@@ -13,19 +13,23 @@ dirR := false
 
 sdl_init :: proc "c" (appstate: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppResult { 
 	context = runtime.default_context()
+	fmt.println("Initializing SDL")
 	ok := sdl.Init({ .VIDEO})
 	if !ok { 
-		log.panicf("Failed to init %s", sdl.GetError())
+		fmt.printf("Failed to init %s", sdl.GetError())
+		return sdl.AppResult.FAILURE
 	}
 	window = new(sdl.Window)
 	renderer = new(sdl.Renderer)
 
 	ok = sdl.CreateWindowAndRenderer("Hello Callback SDL3", i32(appWidth), i32(appWidth), { }, &window, &renderer)
 	if !ok { 
-		log.panic("Fialed to create window and renderer", sdl.GetError())
+		fmt.printf("Fialed to create window and renderer", sdl.GetError())
+		return sdl.AppResult.FAILURE
 	}
 	if !sdl.SetRenderVSync(renderer, 1) { 
-		log.info("Failed to set vsync")
+		fmt.printf("Failed to set vsync")
+		return sdl.AppResult.FAILURE
 	}
 	posx = 0
 	posy = 0
@@ -69,12 +73,12 @@ event_callback :: proc "c" (appstate: rawptr, event:^sdl.Event) -> sdl.AppResult
 	return sdl.AppResult.CONTINUE
 }
 
-app_quit :: proc "c" (appstate: rawptr, result: sdl.AppResult) -> sdl.AppResult { 
+app_quit :: proc "c" (appstate: rawptr, result: sdl.AppResult) { 
 	context = runtime.default_context()
-	return sdl.AppResult.SUCCESS
+	fmt.println("Quiting")
 }
 
 main :: proc() { 
 	argv :cstring= ""
-	sdl.EnterAppMainCallbacks(0, &argv, sdl_init,app_iterate,event_callback,nil)
+	sdl.EnterAppMainCallbacks(0, &argv, sdl_init,app_iterate,event_callback,app_quit)
 }
