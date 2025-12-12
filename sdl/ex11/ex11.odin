@@ -60,7 +60,7 @@ AppIterate :: proc "c" (appState: rawptr) -> sdl.AppResult {
 	sdl.RenderClear(appState.renderer)
 	sdl.SetRenderDrawColor(appState.renderer, 0xFF, 0x00, 0x00, sdl.ALPHA_OPAQUE)
 	buff: [256]u8
-	appState.text.text = fmt.bprintf(buff[:], "Milliseconds since timer start: %d", appState.timer.started ? sdl.GetTicksNS() - appState.timer.startTicks:0)
+	appState.text.text = fmt.bprintf(buff[:], "Milliseconds since timer start: %d", sup.GetTicks(&appState.timer))
 	if !sup.UpdateText(appState.renderer, appState.text) { 
 		fmt.printfln("Failed to update text")
 	}
@@ -81,6 +81,8 @@ AppEvent :: proc "c" (appState: rawptr, event:^sdl.Event) -> sdl.AppResult {
 			return sdl.AppResult.SUCCESS
 		case sdl.Scancode.SPACE:
 			sup.ToggleTimer(&appState.timer)
+		case sdl.Scancode.P:
+			sup.TogglePauseTimer(&appState.timer)
 		}
 	}
 

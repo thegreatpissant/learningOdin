@@ -2,6 +2,13 @@ package sup
 
 import sdl "vendor:sdl3"
 
+Timer :: struct { 
+	startTicks : u64,
+	pauseTicks : u64,
+	started : bool,
+	paused : bool
+}
+
 StartTimer :: proc(timer:^Timer){ 
 	timer.started = true
 	timer.paused = false
@@ -21,4 +28,42 @@ ToggleTimer :: proc(timer:^Timer) {
 	} else { 
 		StartTimer(timer)
 	}
+}
+
+PauseTimer ::proc(timer:^Timer) { 
+	if timer.paused { 
+		return
+	}
+	timer.paused = true
+	timer.pauseTicks = sdl.GetTicksNS() - timer.startTicks
+	timer.startTicks = 0
+}
+
+UnPauseTimer ::proc(timer:^Timer) { 
+	if !timer.paused { 
+		return
+	}
+	timer.paused = false
+	ticks := sdl.GetTicksNS()
+	timer.startTicks = ticks - timer.pauseTicks
+	timer.pauseTicks = 0
+}
+
+TogglePauseTimer ::proc(timer:^Timer) { 
+	if timer.paused { 
+		UnPauseTimer(timer)
+	} else { 
+		PauseTimer(timer)
+	}
+}
+
+GetTicks ::proc(timer:^Timer) -> u64 { 
+	if timer.started { 
+		if timer.paused { 
+			return timer.pauseTicks
+		} else { 
+			return sdl.GetTicksNS() - timer.startTicks
+		}
+	}
+	return 0
 }

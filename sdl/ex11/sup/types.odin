@@ -18,10 +18,3 @@ App :: struct {
 	text: ^Text
 }
 
-Timer :: struct { 
-	startTicks : u64,
-	pauseTicks : u64,
-	started : bool,
-	paused : bool
-}
-
