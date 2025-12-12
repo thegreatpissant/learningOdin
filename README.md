@@ -4,5 +4,5 @@ Directories:
 * scratch : Random items
 * runningTests : https://odin-lang.org/docs/testing/
 * assets : images and other items to use 
-* TicTacToe(WIP) : Game of TicTacToe using SDL3
+* TicTacToe : Game of TicTacToe using SDL3
 * Should I need a UI use microui https://gist.github.com/gingerBill/5bbcca224bf8d9dcd09dde38b2567d10
