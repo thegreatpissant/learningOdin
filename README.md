@@ -5,4 +5,5 @@ Directories:
 * runningTests : https://odin-lang.org/docs/testing/
 * assets : images and other items to use 
 * TicTacToe : Game of TicTacToe using SDL3
+* sdlAppWithCallbacks : Example using SDL3 callbacks
 * Should I need a UI use microui https://gist.github.com/gingerBill/5bbcca224bf8d9dcd09dde38b2567d10
