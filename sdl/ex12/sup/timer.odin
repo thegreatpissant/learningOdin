@@ -1,8 +1,11 @@
 package sup
 
+import "core:fmt"
 import sdl "vendor:sdl3"
 
 Timer :: struct { 
+	tickDelay :u64,
+	prevTick :u64,
 	startTicks : u64,
 	pauseTicks : u64,
 	started : bool,
@@ -66,4 +69,13 @@ GetTicks ::proc(timer:^Timer) -> u64 {
 		}
 	}
 	return 0
+}
+
+Tick ::proc(timer:^Timer) { 
+	ticks := sdl.GetTicksNS()
+	elapsed := timer.prevTick > ticks ? 0 : ticks - timer.prevTick
+	delay := elapsed > timer.tickDelay? 0 : timer.tickDelay - elapsed
+	timer.prevTick = ticks
+	//fmt.printfln("tickDelay:%d, elapsed:%d, prevTick:%d, ticks: %d, delay: %d",timer.tickDelay,elapsed , timer.prevTick, ticks, delay)
+	sdl.DelayNS(delay)
 }

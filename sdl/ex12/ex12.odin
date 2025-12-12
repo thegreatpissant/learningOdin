@@ -60,6 +60,8 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 
 	fmt.printfln("Initializing SDL - DONE")
 	prevTick = sdl.GetTicksNS()
+	app.timer.tickDelay = sdl.NS_PER_SECOND / 60
+	app.timer.prevTick = prevTick
 	return sdl.AppResult.CONTINUE
 }
 
@@ -79,6 +81,7 @@ AppIterate :: proc "c" (appState: rawptr) -> sdl.AppResult {
 	}
 	sup.RenderText(appState, appState.text)
 	sdl.RenderPresent(appState.renderer)
+	sup.Tick(&appState.timer)
 	return sdl.AppResult.CONTINUE
 }
 
