@@ -8,6 +8,7 @@ import sup "sup"
 
 prevTick :u64= 0
 vsync :i32= 0
+frame := 0
 ToggleVSync ::proc(app:^sup.App) { 
 	if vsync == 0 { 
 		vsync = 1
@@ -48,6 +49,8 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	app.text.font = app.font
 	app.text.position = sdl.FRect{ 0, 0, 0, 0}
 	app.text.text = "Hello World"
+	app.targetFPS = 30
+	app.targetFPSns = sdl.NS_PER_SECOND / app.targetFPS
 
 	if app.font == nil { 
 		fmt.printfln("Failed to load font")
@@ -59,29 +62,33 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	}
 
 	fmt.printfln("Initializing SDL - DONE")
-	prevTick = sdl.GetTicksNS()
-	app.timer.tickDelay = sdl.NS_PER_SECOND / 60
+	prevTick = sdl.GetPerformanceCounter()
 	app.timer.prevTick = prevTick
 	return sdl.AppResult.CONTINUE
 }
 
 AppIterate :: proc "c" (appState: rawptr) -> sdl.AppResult { 
+	curTick := sdl.GetPerformanceCounter()
     appState := (^sup.App)(appState)
 	context = appState._context
 	sdl.SetRenderDrawColor(appState.renderer, 0x00, 0x00, 0x00, sdl.ALPHA_OPAQUE)
 	sdl.RenderClear(appState.renderer)
 	sdl.SetRenderDrawColor(appState.renderer, 0xFF, 0x00, 0x00, sdl.ALPHA_OPAQUE)
-	curTick := sdl.GetTicksNS()
-	fps := sdl.NS_PER_SECOND / (sdl.GetTicksNS() - prevTick)
+	elapsed := curTick - prevTick
+	fps := elapsed > 0 ? sdl.NS_PER_SECOND / elapsed : 0
+	fmt.printfln("frame: %5d, elapsed: %10v, curTick: %10v, prevTick: %10v, fps: %10v", frame, elapsed, curTick, prevTick, fps)
+	frame += 1
 	prevTick = curTick
 	buff: [256]u8
-	appState.text.text = fmt.bprintf(buff[:], "FPS: %d", fps)
+	appState.text.text = fmt.bprintf(buff[:], "Target: %v, FPS: %v, Diff: %v", appState.targetFPS, fps, appState.targetFPS > fps ? appState.targetFPS - fps: 0)
 	if !sup.UpdateText(appState.renderer, appState.text) { 
 		fmt.printfln("Failed to update text")
 	}
 	sup.RenderText(appState, appState.text)
 	sdl.RenderPresent(appState.renderer)
-	sup.Tick(&appState.timer)
+	frameElapsed := sdl.GetPerformanceCounter() - curTick
+	delay := frameElapsed > appState.targetFPSns ? 0 : appState.targetFPSns - frameElapsed
+	sdl.DelayPrecise(delay)
 	return sdl.AppResult.CONTINUE
 }
 
@@ -101,6 +108,18 @@ AppEvent :: proc "c" (appState: rawptr, event:^sdl.Event) -> sdl.AppResult {
 			sup.TogglePauseTimer(&appState.timer)
 		case sdl.Scancode.V:
 			ToggleVSync(appState)
+		case sdl.Scancode.PAGEUP:
+			appState.targetFPS += 10
+			appState.targetFPSns = sdl.NS_PER_SECOND / appState.targetFPS
+		case sdl.Scancode.UP:
+			appState.targetFPS += 1
+			appState.targetFPSns = sdl.NS_PER_SECOND / appState.targetFPS
+		case sdl.Scancode.PAGEDOWN:
+			appState.targetFPS -= 10
+			appState.targetFPSns = sdl.NS_PER_SECOND / appState.targetFPS
+		case sdl.Scancode.DOWN:
+			appState.targetFPS -= 1
+			appState.targetFPSns = sdl.NS_PER_SECOND / appState.targetFPS
 		}
 	}
 

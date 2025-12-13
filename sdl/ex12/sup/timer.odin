@@ -1,5 +1,6 @@
 package sup
 
+import "core:time"
 import "core:fmt"
 import sdl "vendor:sdl3"
 
@@ -47,7 +48,7 @@ UnPauseTimer ::proc(timer:^Timer) {
 		return
 	}
 	timer.paused = false
-	ticks := sdl.GetTicksNS()
+	ticks := sdl.GetPerformanceCounter()
 	timer.startTicks = ticks - timer.pauseTicks
 	timer.pauseTicks = 0
 }
@@ -65,17 +66,8 @@ GetTicks ::proc(timer:^Timer) -> u64 {
 		if timer.paused { 
 			return timer.pauseTicks
 		} else { 
-			return sdl.GetTicksNS() - timer.startTicks
+			return sdl.GetPerformanceCounter() - timer.startTicks
 		}
 	}
 	return 0
-}
-
-Tick ::proc(timer:^Timer) { 
-	ticks := sdl.GetTicksNS()
-	elapsed := timer.prevTick > ticks ? 0 : ticks - timer.prevTick
-	delay := elapsed > timer.tickDelay? 0 : timer.tickDelay - elapsed
-	timer.prevTick = ticks
-	//fmt.printfln("tickDelay:%d, elapsed:%d, prevTick:%d, ticks: %d, delay: %d",timer.tickDelay,elapsed , timer.prevTick, ticks, delay)
-	sdl.DelayNS(delay)
 }

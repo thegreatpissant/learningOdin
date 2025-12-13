@@ -15,6 +15,8 @@ App :: struct {
 	width :i32,
 	height :i32,
 	font: ^sdl_ttf.Font,
-	text: ^Text
+	text: ^Text,
+	targetFPS :u64,
+	targetFPSns :u64
 }
 
