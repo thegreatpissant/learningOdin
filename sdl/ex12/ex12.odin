@@ -70,7 +70,8 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 AppIterate :: proc "c" (appState: rawptr) -> sdl.AppResult { 
 	curTick := sdl.GetPerformanceCounter()
     appState := (^sup.App)(appState)
-	context = appState._context
+	context = runtime.default_context()
+	//context = appState._context
 	sdl.SetRenderDrawColor(appState.renderer, 0x00, 0x00, 0x00, sdl.ALPHA_OPAQUE)
 	sdl.RenderClear(appState.renderer)
 	sdl.SetRenderDrawColor(appState.renderer, 0xFF, 0x00, 0x00, sdl.ALPHA_OPAQUE)
@@ -94,7 +95,8 @@ AppIterate :: proc "c" (appState: rawptr) -> sdl.AppResult {
 
 AppEvent :: proc "c" (appState: rawptr, event:^sdl.Event) -> sdl.AppResult { 
 	appState := (^sup.App)(appState)
-	context = (^sup.App)(appState)._context
+	context = runtime.default_context()
+	//context = (^sup.App)(appState)._context
 	#partial switch (event.type) { 
 	case sdl.EventType.QUIT:
 		return sdl.AppResult.SUCCESS
@@ -115,10 +117,15 @@ AppEvent :: proc "c" (appState: rawptr, event:^sdl.Event) -> sdl.AppResult {
 			appState.targetFPS += 1
 			appState.targetFPSns = sdl.NS_PER_SECOND / appState.targetFPS
 		case sdl.Scancode.PAGEDOWN:
-			appState.targetFPS -= 10
+			if appState.targetFPS > 10 { 
+				appState.targetFPS -= 10
+			}
 			appState.targetFPSns = sdl.NS_PER_SECOND / appState.targetFPS
 		case sdl.Scancode.DOWN:
 			appState.targetFPS -= 1
+			if appState.targetFPS <= 0 { 
+				appState.targetFPS = 1
+			}
 			appState.targetFPSns = sdl.NS_PER_SECOND / appState.targetFPS
 		}
 	}
@@ -128,7 +135,8 @@ AppEvent :: proc "c" (appState: rawptr, event:^sdl.Event) -> sdl.AppResult {
 
 AppQuit :: proc "c" (appState: rawptr, result: sdl.AppResult) { 
 	appState := (^sup.App)(appState)
-	context = appState._context
+	context = runtime.default_context()
+	//context = appState._context
 	fmt.printfln("Closing %s with result %v", appState.title, result)
 	sdl_ttf.Quit()
 	sdl.Quit()
