@@ -155,8 +155,6 @@ GameStart :: proc(app: ^scaffolding.App) {
 }
 
 GameEnd :: proc(app: ^scaffolding.App) {
-	event: sdl.Event
-	quit := false
 	app.gameState = scaffolding.GameState.UNKNOWN
 
 	sdl.SetRenderTarget(app.window.renderer, app.board.texture)
@@ -337,30 +335,30 @@ bool,
 	return window, success
 }
 CreateXTexture :: proc(app: ^scaffolding.App) -> ^sdl.Texture {
-	xTexture := CreateTexture(app, app.width / 3, app.height / 3)
-	sdl.SetTextureBlendMode(xTexture, {sdl.BlendMode.BLEND})
-	sdl.SetRenderTarget(app.window.renderer, xTexture)
+	texture := CreateTexture(app, app.width / 3, app.height / 3)
+	sdl.SetTextureBlendMode(texture, {sdl.BlendMode.BLEND})
+	sdl.SetRenderTarget(app.window.renderer, texture)
 	sdl.SetRenderDrawBlendMode(app.window.renderer, {sdl.BlendMode.BLEND})
 	sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0x00)
 	sdl.RenderClear(app.window.renderer)
 	sdl.SetRenderDrawColor(app.window.renderer, 0xff, 0x00, 0x00, 0xff)
-	sdl.RenderLine(app.window.renderer, 0, 0, f32(xTexture.w), f32(xTexture.h))
-	sdl.RenderLine(app.window.renderer, f32(xTexture.w), 0, 0, f32(xTexture.h))
+	sdl.RenderLine(app.window.renderer, 0, 0, f32(texture.w), f32(texture.h))
+	sdl.RenderLine(app.window.renderer, f32(texture.w), 0, 0, f32(texture.h))
 	sdl.SetRenderTarget(app.window.renderer, nil)
-	return xTexture
+	return texture
 }
 
 CreateOTexture :: proc(app: ^scaffolding.App) -> ^sdl.Texture {
-	oTexture := CreateTexture(app, app.width / 3, app.height / 3)
-	sdl.SetTextureBlendMode(oTexture, {sdl.BlendMode.BLEND})
-	sdl.SetRenderTarget(app.window.renderer, oTexture)
+	texture := CreateTexture(app, app.width / 3, app.height / 3)
+	sdl.SetTextureBlendMode(texture, {sdl.BlendMode.BLEND})
+	sdl.SetRenderTarget(app.window.renderer, texture)
 	sdl.SetRenderDrawBlendMode(app.window.renderer, {sdl.BlendMode.BLEND})
 	sdl.SetRenderDrawColor(app.window.renderer, 0x00, 0x00, 0x00, 0x00)
 	sdl.RenderClear(app.window.renderer)
 	sdl.SetRenderDrawColor(app.window.renderer, 0xff, 0x00, 0x00, 0xff)
 
-	width := oTexture.w
-	height := oTexture.h
+	width := texture.w
+	height := texture.h
 	posx := width / 2
 	posy := height / 2
 	for i in 0 ..< width / 2 {
@@ -391,7 +389,7 @@ CreateOTexture :: proc(app: ^scaffolding.App) -> ^sdl.Texture {
 			}
 		}
 		sdl.SetRenderTarget(app.window.renderer, nil)
-		return oTexture
+		return texture
 }
 
 CreateTexture :: proc(
