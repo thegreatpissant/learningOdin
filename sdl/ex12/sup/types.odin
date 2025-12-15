@@ -6,17 +6,17 @@ import sdl_ttf "vendor:sdl3/ttf"
 
 Position :: sdl.Point
 
-App :: struct { 
-	_context:runtime.Context,
-	timer:Timer,
-	title: cstring,
-	window: ^sdl.Window,
-	renderer: ^sdl.Renderer,
-	width :i32,
-	height :i32,
-	font: ^sdl_ttf.Font,
-	text: ^Text,
-	targetFPS :u64,
-	targetFPSns :u64
+App :: struct {
+	_context:    runtime.Context,
+	timer:       Timer,
+	title:       cstring,
+	window:      ^sdl.Window,
+	renderer:    ^sdl.Renderer,
+	width:       i32,
+	height:      i32,
+	font:        ^sdl_ttf.Font,
+	text:        ^Text,
+	targetFPS:   u64,
+	targetFPSns: u64
 }
 
