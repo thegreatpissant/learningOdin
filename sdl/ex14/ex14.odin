@@ -52,10 +52,14 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	fmt.printfln("Initialize Window - DONE")
 
 	fmt.printfln("Loading Textures")
-	if !sup.LoadTexture(app, "./assets/02-textures-and-extension-libraries/foo-sprites.png", &app.character.texture) {
+	textureFrameCount :i32= 4
+	if !sup.LoadTexture(app, "./assets/02-textures-and-extension-libraries/foo-sprites.png", &app.character.texture, textureFrameCount) {
 		fmt.printfln("Failed to load texture")
 		return sdl.AppResult.FAILURE
 	}
+	app.character.deltaTime = 0
+	app.character.xDir = 1
+	app.character.pos.y = f32(app.character.texture.height / 2)
 	fmt.printfln("Loading Textures - DONE")
 
 	return sdl.AppResult.CONTINUE
@@ -71,19 +75,36 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	app.text.text = fmt.bprintf(buf[:], "%v fps", app.fps.fps)
 
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
+	fmt.printfln("deltaTime: %f", deltaTime)
+	fmt.printfln("Update character")
+	sup.UpdateCharacterAnimation(&app.character, app.fps.delta)
 
+	if i32(app.character.pos.x) > app.width - app.character.texture.frameWidth { 
+		app.character.xDir = -1
+	} 
+	if i32(app.character.pos.x) < 0 { 
+		app.character.xDir = 1
+	} 
+	spriteDirection := app.character.xDir > 0 ? sdl.FlipMode.HORIZONTAL : sdl.FlipMode.NONE
+
+	// move forward at the pace of the animation
+	distancePerSecond := app.character.texture.width / app.character.texture.frames
+	fmt.printfln("distancePerSecond %v", distancePerSecond)
+	app.character.pos.x += f32(distancePerSecond) * app.character.xDir * f32(deltaTime)
 	// Render
 	sdl.SetRenderDrawColor(app.renderer, 0xff, 0xff, 0xff, sdl.ALPHA_OPAQUE)
 	sdl.RenderClear(app.renderer)
 	sup.UpdateText(app.renderer, app.text)
 	sup.RenderText(app, app.text, &app.text.position)
+	srcRect := sup.GetSrcRect(app.character.texture)
 	sup.RenderTexture(
 		app.character.texture,
-		sdl.FRect{0, 0, f32(app.character.texture.width), f32(app.character.texture.height)},
-		sdl.FRect{app.character.pos.x, app.character.pos.y, f32(app.character.texture.width), f32(app.character.texture.height)},
+		srcRect,
+		sdl.FRect{app.character.pos.x, app.character.pos.y, f32(app.character.texture.frameWidth), f32(app.character.texture.height)},
 		app,
 		0,
 		sdl.FPoint{0, 0},
+		spriteDirection
 	)
 	sdl.RenderPresent(app.renderer)
 	sup.EndFrame(&app.fps)

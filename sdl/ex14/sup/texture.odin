@@ -9,9 +9,19 @@ Texture :: struct {
 	width:   i32,
 	height:  i32,
 	frames:  i32,
+	frame:   i32,
+	frameWidth : i32,
 }
 
-LoadTexture :: proc(app: ^App, location: string, texture: ^^Texture) -> bool {
+GetSrcRect :: proc(texture:^Texture) -> sdl.FRect { 
+	width :f32= f32(texture.width / texture.frames)
+	height :f32= f32(texture.height)
+	srcX :f32= width * f32(texture.frame)
+	srcY :f32= 0
+	return sdl.FRect{ srcX, srcY, width, height }
+}
+
+LoadTexture :: proc(app: ^App, location: string, texture: ^^Texture, frameCount:i32 = 1) -> bool {
 	if texture^ == nil {
 		texture^ = new(Texture)
 	}
@@ -37,6 +47,10 @@ LoadTexture :: proc(app: ^App, location: string, texture: ^^Texture) -> bool {
 	if texture^.texture == nil {
 		sdl.Log("Failed to create texture: %s\n", sdl.GetError())
 	}
+
+	texture^.frame = 0
+	texture^.frames = frameCount
+	texture^.frameWidth = texture^.width / frameCount
 
 	return true
 }
