@@ -75,8 +75,6 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	app.text.text = fmt.bprintf(buf[:], "%v fps", app.fps.fps)
 
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
-	fmt.printfln("deltaTime: %f", deltaTime)
-	fmt.printfln("Update character")
 	sup.UpdateCharacterAnimation(&app.character, app.fps.delta)
 
 	if i32(app.character.pos.x) > app.width - app.character.texture.frameWidth { 
@@ -89,7 +87,6 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 
 	// move forward at the pace of the animation
 	distancePerSecond := app.character.texture.width / app.character.texture.frames
-	fmt.printfln("distancePerSecond %v", distancePerSecond)
 	app.character.pos.x += f32(distancePerSecond) * app.character.xDir * f32(deltaTime)
 	// Render
 	sdl.SetRenderDrawColor(app.renderer, 0xff, 0xff, 0xff, sdl.ALPHA_OPAQUE)
