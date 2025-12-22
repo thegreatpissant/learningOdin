@@ -2,7 +2,6 @@ package ex13
 
 import "base:runtime"
 import "core:fmt"
-import "core:math/rand"
 import "core:mem"
 import sup "sup"
 import sdl "vendor:sdl3"
@@ -12,8 +11,12 @@ track: mem.Tracking_Allocator
 menuText_1: ^sup.Text
 menuText_2: ^sup.Text
 menuText_3: ^sup.Text
-beatSound : ^sup.Audio
-audioStream : ^sdl.AudioStream
+beatSound : ^sup.AudioSource
+highSound : ^sup.AudioSource
+lowSound : ^sup.AudioSource
+mediumSound : ^sup.AudioSource
+scratchSound : ^sup.AudioSource
+audioDevice : sdl.AudioDeviceID
 
 AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppResult {
 	context = runtime.default_context()
@@ -82,23 +85,48 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	sup.UpdateText(app.renderer, menuText_3)
 	fmt.printfln("Loading Textures - DONE")
 
-	fmt.printfln("Loading audio")
-	beatSound = new(sup.Audio)
-	beatSound.spec = new(sdl.AudioSpec)
-	if !sdl.LoadWAV("./assets/sounds/beat.wav", beatSound.spec, &beatSound.buf, &beatSound.len) { 
-		fmt.printfln("Failed to load sound: %s", sdl.GetError())
+	fmt.printfln("Initialize Audio")
+	audioDevice = sdl.OpenAudioDevice(sdl.AUDIO_DEVICE_DEFAULT_PLAYBACK, nil)
+	if audioDevice == 0 { 
+		fmt.printfln("Failed to initialize audio device %s", sdl.GetError())
 		return sdl.AppResult.FAILURE
 	}
-	audioStream = sdl.OpenAudioDeviceStream(sdl.AUDIO_DEVICE_DEFAULT_PLAYBACK, beatSound.spec, nil, nil)
-	if audioStream == nil { 
-		fmt.printfln("Failed to create stream: %s", sdl.GetError())
+	beatSound = sup.LoadWavSource(audioDevice, "./assets/sounds/beat.wav")
+	if beatSound == nil { 
+		fmt.printfln("Failed to load beatSound")
 		return sdl.AppResult.FAILURE
 	}
-	sdl.ResumeAudioStreamDevice(audioStream)
-	fmt.printfln("Loading audio - DONE")
+	highSound = sup.LoadWavSource(audioDevice, "./assets/sounds/high.wav")
+	if highSound == nil { 
+		fmt.printfln("Failed to load highSound")
+		return sdl.AppResult.FAILURE
+	}
+
+	lowSound = sup.LoadWavSource(audioDevice, "./assets/sounds/low.wav")
+	if lowSound == nil { 
+		fmt.printfln("Failed to load lowSound")
+		return sdl.AppResult.FAILURE
+	}
+
+	mediumSound = sup.LoadWavSource(audioDevice, "./assets/sounds/medium.wav")
+	if mediumSound == nil { 
+		fmt.printfln("Failed to load mediumSound")
+		return sdl.AppResult.FAILURE
+	}
+
+	scratchSound = sup.LoadWavSource(audioDevice, "./assets/sounds/scratch.wav")
+	if scratchSound == nil { 
+		fmt.printfln("Failed to load scratchSound")
+		return sdl.AppResult.FAILURE
+	}
+
+	fmt.printfln("Initialize Audio - DONE")
 	return sdl.AppResult.CONTINUE
 }
 
+/*
+   AudioStreamBuffer
+*/
 AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	// --> INPUT
 	// Init
@@ -111,9 +139,7 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
 
 	// Audio
-	if sdl.GetAudioStreamQueued(audioStream) < i32(beatSound.len) { 
-		sdl.PutAudioStreamData(audioStream, beatSound.buf, i32(beatSound.len))
-	}
+	sup.PrimeAudioSource(beatSound)
 
 	// Render
 	sdl.SetRenderDrawColor(app.renderer, 0x00, 0x00, 0x00, sdl.ALPHA_OPAQUE)
@@ -142,6 +168,22 @@ AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 			return sdl.AppResult.SUCCESS
 		case sdl.Scancode.PAGEUP:
 			sup.SetTargetFPS(&app.fps, app.fps.targetFPS + 10)
+		case sdl.Scancode._1:
+			sdl.PutAudioStreamData(highSound.stream, highSound.buf, i32(highSound.len))
+		case sdl.Scancode._2:
+			sdl.PutAudioStreamData(lowSound.stream, lowSound.buf, i32(lowSound.len))
+		case sdl.Scancode._3:
+			sdl.PutAudioStreamData(mediumSound.stream, mediumSound.buf, i32(mediumSound.len))
+		case sdl.Scancode._4:
+			sdl.PutAudioStreamData(scratchSound.stream, scratchSound.buf, i32(scratchSound.len))
+		case sdl.Scancode._9:
+			if beatSound.playing { 
+				sup.PauseWavSource(beatSound)
+			} else { 
+				sup.PlayWavSource(audioDevice, beatSound)
+			}
+		case sdl.Scancode._0:
+			sup.StopAudioSource(beatSound)	
 		}
 	}
 	return sdl.AppResult.CONTINUE

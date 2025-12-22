@@ -1,7 +1,6 @@
 package sup
 
 import "base:runtime"
-import "core:fmt"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
@@ -15,12 +14,6 @@ Character :: struct {
 	xVel:    f32,
 	yVel:	 f32,
 	deltaTime: u64,
-}
-
-Audio :: struct { 
-	spec : ^sdl.AudioSpec,
-	buf : [^]u8,
-	len : u32
 }
 
 UpdateCharacterAnimation :: proc(character:^Character, deltaTime:u64) { 
