@@ -10,3 +10,8 @@
 | True Type Fonts          | ex8     |
 | Mouse Movements          | ex9     |
 | Timing                   | ex10    |
+| Advanced Timers          | ex11    |
+| FrameRate and VSync      | ex12    |
+| Motion                   | ex13    |
+| Animation                | ex14    |
+| Effects and Music        | ex15    |
