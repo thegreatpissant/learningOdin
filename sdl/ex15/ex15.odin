@@ -1,4 +1,4 @@
-package ex13
+package ex15
 
 import "base:runtime"
 import "core:fmt"
@@ -38,7 +38,7 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	fmt.printfln("Initialize App")
 	app := new(sup.App)
 	appState^ = app
-	app.title = "ex13"
+	app.title = "ex15"
 	app.width = 640
 	app.height = 480
 	app.window = new(sdl.Window)
