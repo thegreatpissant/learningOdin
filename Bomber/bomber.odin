@@ -9,25 +9,6 @@ import sdl_ttf "vendor:sdl3/ttf"
 
 track: mem.Tracking_Allocator
 
-// Actors
-// Bomber
-Bomber :: struct { 
-	texture : sup.Texture,
-	speed: f32,
-	bombcount: i32,
-	position: sup.Position
-}
-// Bucket
-Bucket :: struct { 
-	texture : sup.Texture,
-	collider : sup.BoxCollider,
-	position : sup.Position
-}
-// Player
-Player :: struct { 
-	points : i32,
-}
-
 AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppResult {
 	context = runtime.default_context()
 
@@ -62,9 +43,6 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	app.fps.frameStartTicks = sdl.GetPerformanceCounter()
 	fmt.printfln("Initialize App - DONE")
 
-	fmt.printfln("Initialize Actors")
-	fmt.printfln("Initialize Actors - DONE")
-
 	fmt.printfln("Initialize Window")
 	if !sdl.CreateWindowAndRenderer(app.title, app.width, app.height, {}, &app.window, &app.renderer) {
 		fmt.printfln("Failed to create window and renderer %s", sdl.GetError())
@@ -77,12 +55,43 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 
 	fmt.printfln("Initialize Audio")
 	fmt.printfln("Initialize Audio - DONE")
+
+	fmt.printfln("Initialize Actors")
+	app.bomber = new(sup.Bomber)
+	if !sup.LoadTexture(app, "./assets/bomber/bomber.png", &app.bomber.texture) { 
+		fmt.printfln("Failed to load bomber texture: %s", sdl.GetError())
+	}
+	app.bomber.position.x = f32(app.width / 2)
+	app.bomber.position.y = f32(app.height / 2)
+	app.bomber.width = f32(app.bomber.texture.frameWidth) / 4
+	app.bomber.height = f32(app.bomber.texture.height) / 4
+	app.bomber.spawnTimer.tickDelay = 1000000000
+	sup.StartTimer(&app.bomber.spawnTimer)
+
+	bomb :^sup.Bomb= new(sup.Bomb)
+	bomb.enabled = false
+	if !sup.LoadTexture(app, "./assets/bomber/bomb.png", &bomb.texture) { 
+		fmt.printfln("Failed to load bomb texture: %s", sdl.GetError())
+	}
+	bomb.position.x = f32(app.width / 2)
+	bomb.position.y = f32(app.width / 3 * 2)
+	bomb.width = f32(bomb.texture.frameWidth) / 5
+	bomb.height = f32(bomb.texture.height) / 5
+	append(&app.bombs, bomb)
+
+	app.player = new(sup.Player)
+	fmt.printfln("Initialize Actors - DONE")
+
 	return sdl.AppResult.CONTINUE
 }
 
-/*
-   AudioStreamBuffer
-*/
+UpdateScene :: proc(app:^sup.App) { 
+	sup.UpdateBomber(app.bomber, app.bombs, app.fps.delta)
+	sup.UpdateBombs(app.bombs, app.fps.delta)
+}
+
+BISCOTTI :: sdl.Color{ 0xe3, 0xc5, 0x65, 0xff }
+
 AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	// --> INPUT
 	// Init
@@ -94,14 +103,36 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	app.text.text = fmt.bprintf(buf[:], "%v fps", app.fps.fps)
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
 
+	// Actors
+	UpdateScene(app)
 	// Audio
 
 	// Render
-	sdl.SetRenderDrawColor(app.renderer, 0x00, 0x00, 0x00, sdl.ALPHA_OPAQUE)
+	sdl.SetRenderDrawColor(app.renderer, BISCOTTI.r, BISCOTTI.g, BISCOTTI.b, sdl.ALPHA_OPAQUE)
 	sdl.RenderClear(app.renderer)
 	sup.UpdateText(app.renderer, app.text)
 	sup.RenderText(app, app.text, &app.text.position)
 	sdl.SetRenderDrawBlendMode(app.renderer, sdl.BLENDMODE_BLEND)
+	sup.RenderTexture(
+		app.bomber.texture, 
+		sup.GetSrcRect(app.bomber.texture), 
+		sdl.FRect{ app.bomber.position.x, app.bomber.position.y, app.bomber.width, app.bomber.height},
+		app, 
+		0,
+		sdl.FPoint{ 0,0}
+	)
+	for bomb in app.bombs { 
+		if bomb.enabled { 
+			sup.RenderTexture(
+				bomb.texture,
+				sup.GetSrcRect(bomb.texture),
+				sdl.FRect{bomb.position.x, bomb.position.y, bomb.width, bomb.height},
+				app,
+				0, sdl.FPoint{ 0, 0}
+			)
+		}
+	}	
+
 	sdl.RenderPresent(app.renderer)
 	sup.EndFrame(&app.fps)
 	return sdl.AppResult.CONTINUE
@@ -149,4 +180,3 @@ main :: proc() {
 		fmt.println("%v leaked %m", leak.location, leak.size)
 	}
 }
-

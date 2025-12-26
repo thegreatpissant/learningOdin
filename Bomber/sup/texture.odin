@@ -13,6 +13,24 @@ Texture :: struct {
 	frameWidth : i32,
 }
 
+Animation :: struct {
+	texture: ^Texture,
+	pos:     Position,
+	xDir:	f32,
+	yDir:	f32,	
+	xVel:    f32,
+	yVel:	 f32,
+	deltaTime: u64,
+}
+
+UpdateAnimation :: proc(animation:^Animation, deltaTime:u64) { 
+	animation.deltaTime += deltaTime
+	nsPerSecond :u64= sdl.NS_PER_SECOND / u64(animation.texture.frames)
+	passedFrames :u64= animation.deltaTime / nsPerSecond
+	animation.deltaTime -= passedFrames * nsPerSecond
+	animation.texture.frame = (animation.texture.frame + i32(passedFrames)) % animation.texture.frames
+}
+
 GetSrcRect :: proc(texture:^Texture) -> sdl.FRect { 
 	width :f32= f32(texture.width / texture.frames)
 	height :f32= f32(texture.height)

@@ -15,7 +15,7 @@ Timer :: struct {
 StartTimer :: proc(timer: ^Timer) {
 	timer.started = true
 	timer.paused = false
-	timer.startTicks = sdl.GetTicksNS()
+	timer.startTicks = sdl.GetPerformanceCounter()
 	timer.pauseTicks = 0
 }
 StopTimer :: proc(timer: ^Timer) {
@@ -69,6 +69,17 @@ GetTicks :: proc(timer: ^Timer) -> u64 {
 		}
 	}
 	return 0
+}
+
+Ticked :: proc(timer: ^Timer) -> bool { 
+	ticks := GetTicks(timer)
+	fmt.printfln("ticks: %v, timer.tickDelay: %v", ticks, timer.tickDelay)
+	if ticks > timer.tickDelay { 
+		timer.startTicks = sdl.GetPerformanceCounter()
+		fmt.printfln("Ticked")
+		return true
+	}
+	return false
 }
 
 FPS :: struct {
