@@ -55,7 +55,7 @@ LoadTexture :: proc(app: ^App, location: string, texture: ^^Texture, frameCount:
 	texture^.width = tempSurface.w
 	texture^.height = tempSurface.h
 
-	if !sdl.SetSurfaceColorKey(tempSurface, true, sdl.MapSurfaceRGB(tempSurface, 0x00, 0xFF, 0xFF)) {
+	if !sdl.SetSurfaceColorKey(tempSurface, true, sdl.MapSurfaceRGB(tempSurface, 0xff, 0x00, 0xFF)) {
 		sdl.Log("Failed to set surface color key: %s", sdl.GetError())
 		return false
 	}

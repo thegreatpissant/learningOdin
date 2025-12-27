@@ -65,7 +65,8 @@ SpawnBomb :: proc(bombs:Bombs, position: Position) {
 	// linear search is fine for now
 	for bomb in bombs { 
 		if !bomb.enabled { 
-			bomb.position = position
+			bomb.position.x  = position.x - bomb.width / 2
+			bomb.position.y = position.y 
 			bomb.enabled = true
 			return
 		}
@@ -94,7 +95,7 @@ UpdateBomber :: proc(bomber:^Bomber, bombs:Bombs, deltaTime: f32) {
 	}
 
 	if Ticked(&bomber.spawnTimer){ 
-		SpawnBomb(bombs, bomber.position)
+		SpawnBomb(bombs, bomber.position + bomber.spawnPoint)
 	}
 	
 }

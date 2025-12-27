@@ -63,12 +63,14 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	}
 	app.bomber.width = f32(app.bomber.texture.frameWidth) / 4
 	app.bomber.height = f32(app.bomber.texture.height) / 4
-	app.bomber.spawnTimer.tickDelay = 2000000000
+	app.bomber.spawnTimer.tickDelay = 500000000
 	app.bomber.direction = 1
 	app.bomber.speed = app.bomber.width
 	sup.StartTimer(&app.bomber.spawnTimer)
 	app.bomber.position.x = f32(app.width / 2)
 	app.bomber.position.y = app.bomber.height 
+	app.bomber.spawnPoint.x = app.bomber.width / 2
+	app.bomber.spawnPoint.y = app.bomber.height
 
 	bombTexture :^sup.Texture 
 	if !sup.LoadTexture(app, "./assets/bomber/bomb.png", &bombTexture) { 
