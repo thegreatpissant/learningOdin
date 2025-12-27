@@ -73,10 +73,10 @@ GetTicks :: proc(timer: ^Timer) -> u64 {
 
 Ticked :: proc(timer: ^Timer) -> bool { 
 	ticks := GetTicks(timer)
-	fmt.printfln("ticks: %v, timer.tickDelay: %v", ticks, timer.tickDelay)
+	// fmt.printfln("ticks: %v, timer.tickDelay: %v", ticks, timer.tickDelay)
 	if ticks > timer.tickDelay { 
 		timer.startTicks = sdl.GetPerformanceCounter()
-		fmt.printfln("Ticked")
+		// fmt.printfln("Ticked")
 		return true
 	}
 	return false

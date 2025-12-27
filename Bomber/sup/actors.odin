@@ -1,5 +1,6 @@
 package sup
 
+import "core:fmt"
 import "vendor:sdl3"
 
 
@@ -28,6 +29,7 @@ Bomber :: struct {
 	speed: f32,
 	bombcount: i32,
 	position: Position,
+	direction: f32,
 	width: f32,
 	height: f32,
 	spawnTimer: Timer,	
@@ -65,15 +67,32 @@ SpawnBomb :: proc(bombs:Bombs, position: Position) {
 		if !bomb.enabled { 
 			bomb.position = position
 			bomb.enabled = true
+			return
 		}
 	}
 }
-UpdateBombs :: proc(bombs:Bombs, deltatime: u64) { 
+UpdateBombs :: proc(bombs:Bombs, deltatime: f32) {
+	for bomb in bombs { 
+		if bomb.enabled { 
+			bomb.position.y += deltatime * bomb.speed
+			if bomb.position.y > 480 { 
+				bomb.enabled = false
+			}
+		}
+	}
 }
 
-UpdateBomber :: proc(bomber:^Bomber, bombs:Bombs, deltaTime: u64) { 
+UpdateBomber :: proc(bomber:^Bomber, bombs:Bombs, deltaTime: f32) { 
 	//  Update position
 	//  spawn bomb
+	bomber.position.x += bomber.direction * deltaTime * bomber.speed
+	if bomber.position.x > 640 - bomber.width { 
+		bomber.direction = -1
+	}
+	if bomber.position.x < 0 { 
+		bomber.direction = 1
+	}
+
 	if Ticked(&bomber.spawnTimer){ 
 		SpawnBomb(bombs, bomber.position)
 	}

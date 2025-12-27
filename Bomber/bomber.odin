@@ -61,23 +61,30 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	if !sup.LoadTexture(app, "./assets/bomber/bomber.png", &app.bomber.texture) { 
 		fmt.printfln("Failed to load bomber texture: %s", sdl.GetError())
 	}
-	app.bomber.position.x = f32(app.width / 2)
-	app.bomber.position.y = f32(app.height / 2)
 	app.bomber.width = f32(app.bomber.texture.frameWidth) / 4
 	app.bomber.height = f32(app.bomber.texture.height) / 4
-	app.bomber.spawnTimer.tickDelay = 1000000000
+	app.bomber.spawnTimer.tickDelay = 2000000000
+	app.bomber.direction = 1
+	app.bomber.speed = app.bomber.width
 	sup.StartTimer(&app.bomber.spawnTimer)
+	app.bomber.position.x = f32(app.width / 2)
+	app.bomber.position.y = app.bomber.height 
 
-	bomb :^sup.Bomb= new(sup.Bomb)
-	bomb.enabled = false
-	if !sup.LoadTexture(app, "./assets/bomber/bomb.png", &bomb.texture) { 
+	bombTexture :^sup.Texture 
+	if !sup.LoadTexture(app, "./assets/bomber/bomb.png", &bombTexture) { 
 		fmt.printfln("Failed to load bomb texture: %s", sdl.GetError())
 	}
-	bomb.position.x = f32(app.width / 2)
-	bomb.position.y = f32(app.width / 3 * 2)
-	bomb.width = f32(bomb.texture.frameWidth) / 5
-	bomb.height = f32(bomb.texture.height) / 5
-	append(&app.bombs, bomb)
+	for i in 0..=10 { 
+		bomb :^sup.Bomb= new(sup.Bomb)
+		bomb.texture = bombTexture
+		bomb.enabled = false
+		bomb.position.x = f32(app.width / 2)
+		bomb.position.y = f32(app.width / 3 * 2)
+		bomb.width = f32(bomb.texture.frameWidth) / 5
+		bomb.height = f32(bomb.texture.height) / 5
+		bomb.speed = f32(bomb.height)
+		append(&app.bombs, bomb)
+	}
 
 	app.player = new(sup.Player)
 	fmt.printfln("Initialize Actors - DONE")
@@ -85,9 +92,9 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	return sdl.AppResult.CONTINUE
 }
 
-UpdateScene :: proc(app:^sup.App) { 
-	sup.UpdateBomber(app.bomber, app.bombs, app.fps.delta)
-	sup.UpdateBombs(app.bombs, app.fps.delta)
+UpdateScene :: proc(app:^sup.App, deltaTime:f32) { 
+	sup.UpdateBomber(app.bomber, app.bombs, deltaTime)
+	sup.UpdateBombs(app.bombs, deltaTime)
 }
 
 BISCOTTI :: sdl.Color{ 0xe3, 0xc5, 0x65, 0xff }
@@ -102,9 +109,10 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	buf: [256]u8
 	app.text.text = fmt.bprintf(buf[:], "%v fps", app.fps.fps)
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
+	// fmt.printfln("app.fps.delta: %v, sdl.NS_PER_SECOND: %v deltaTime: %v", app.fps.delta, sdl.NS_PER_SECOND, deltaTime)
 
 	// Actors
-	UpdateScene(app)
+	UpdateScene(app, deltaTime)
 	// Audio
 
 	// Render
