@@ -1,6 +1,7 @@
 Directories:
 * .aicontext : prompts for ai to use if I was to use it for code review.
 * assets : images and other items to use 
+* Bomber : kaboom clone
 * docs / : more ai prompts for code review
 * learnOdin/[1,4,5,6,7,8,raylib] : https://learnodin.org/
 * runningTests : https://odin-lang.org/docs/testing/
