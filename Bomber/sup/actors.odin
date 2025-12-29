@@ -36,12 +36,19 @@ Bomber :: struct {
 	spawnPoint : Position,
 }
 
+Buckets :: struct { 
+	buckets : [5]^Bucket,
+	position :Position,
+	dirVec : f32
+}
+
 Bucket :: struct { 
 	texture : ^Texture,
 	collider : BoxCollider,
 	position : Position,
 	width: f32,
-	height: f32
+	height: f32,
+	enabled: bool
 }
 
 Bombs :: [dynamic]^Bomb
@@ -58,6 +65,7 @@ Bomb :: struct {
 
 Player :: struct { 
 	points : i32,
+	// difficulty : Difficulty enum
 }
 
 SpawnBomb :: proc(bombs:Bombs, position: Position) { 
@@ -97,6 +105,13 @@ UpdateBomber :: proc(bomber:^Bomber, bombs:Bombs, deltaTime: f32) {
 	if Ticked(&bomber.spawnTimer){ 
 		SpawnBomb(bombs, bomber.position + bomber.spawnPoint)
 	}
-	
 }
 
+UpdateBuckets :: proc(buckets:^Buckets) { 
+	for bucket in buckets.buckets { 
+		bucket.position.x = buckets.position.x
+		bucket.collider.rect.x = buckets.position.x
+		bucket.collider.rect.w = bucket.width
+		bucket.collider.rect.h = bucket.height
+	}
+}

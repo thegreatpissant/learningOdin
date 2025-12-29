@@ -7,6 +7,7 @@ import sup "sup"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
+FrameRate :: 60
 track: mem.Tracking_Allocator
 
 AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppResult {
@@ -16,6 +17,9 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	if !sdl.Init({.VIDEO , .AUDIO}) {
 		fmt.printfln("Failed to initialize SDL %s", sdl.GetError())
 		return sdl.AppResult.FAILURE
+	}
+	if !sdl.HideCursor() { 
+		fmt.printfln("Failed to hide mouse cursor: %s", sdl.GetError())
 	}
 	fmt.printfln("Initialize SDL - DONE")
 
@@ -39,7 +43,7 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	app.text.color = sdl.Color{0xff, 0x00, 0x00, 0x00}
 	app.text.font = app.font
 	app.text.position = sdl.FPoint{0, 0}
-	sup.SetTargetFPS(&app.fps, 60)
+	sup.SetTargetFPS(&app.fps, FrameRate)
 	app.fps.frameStartTicks = sdl.GetPerformanceCounter()
 	fmt.printfln("Initialize App - DONE")
 
@@ -57,18 +61,21 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	fmt.printfln("Initialize Audio - DONE")
 
 	fmt.printfln("Initialize Actors")
+	assetScale :: 1.75
+
 	app.bomber = new(sup.Bomber)
 	if !sup.LoadTexture(app, "./assets/bomber/bomber.png", &app.bomber.texture) { 
 		fmt.printfln("Failed to load bomber texture: %s", sdl.GetError())
 	}
-	app.bomber.width = f32(app.bomber.texture.frameWidth) / 4
-	app.bomber.height = f32(app.bomber.texture.height) / 4
+	app.bomber.width = (f32(app.bomber.texture.frameWidth) / 4) / assetScale
+	app.bomber.height = (f32(app.bomber.texture.height) / 4) / assetScale
 	app.bomber.spawnTimer.tickDelay = 500000000
 	app.bomber.direction = 1
 	app.bomber.speed = app.bomber.width
 	sup.StartTimer(&app.bomber.spawnTimer)
 	app.bomber.position.x = f32(app.width / 2)
 	app.bomber.position.y = app.bomber.height 
+	//  Bomb spawn point
 	app.bomber.spawnPoint.x = app.bomber.width / 2
 	app.bomber.spawnPoint.y = app.bomber.height
 
@@ -82,13 +89,32 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 		bomb.enabled = false
 		bomb.position.x = f32(app.width / 2)
 		bomb.position.y = f32(app.width / 3 * 2)
-		bomb.width = f32(bomb.texture.frameWidth) / 5
-		bomb.height = f32(bomb.texture.height) / 5
-		bomb.speed = f32(bomb.height)
+		bomb.width = (f32(bomb.texture.frameWidth) / 5 ) / assetScale
+		bomb.height = (f32(bomb.texture.height) / 5 ) / assetScale
+		bomb.speed = f32(bomb.height) * 2
 		append(&app.bombs, bomb)
 	}
 
+	app.buckets = new(sup.Buckets)
+	app.buckets.position.x = f32(app.width) / 2
+	app.buckets.position.y = f32(app.height) / 2
+	bucketTexture : ^sup.Texture
+	if !sup.LoadTexture(app, "./assets/bomber/bucket.png", &bucketTexture) { 
+		fmt.printfln("Failed to load bucket texture: %s", sdl.GetError())
+	}
+	for i in 0..<len(app.buckets.buckets) { 
+		bucket := new(sup.Bucket)
+		bucket.texture = bucketTexture
+		bucket.width = (f32(bucket.texture.frameWidth) / 5 ) / assetScale
+		bucket.height = (f32(bucket.texture.height) / 5 ) / assetScale * .7
+		bucket.position.x = 0
+		bucket.position.y = app.buckets.position.y + f32(i) * bucket.height  + f32(i) * bucket.height * .7
+		bucket.enabled = true
+		app.buckets.buckets[i] =  bucket
+	}
+
 	app.player = new(sup.Player)
+	app.player.points = 0
 	fmt.printfln("Initialize Actors - DONE")
 
 	return sdl.AppResult.CONTINUE
@@ -97,15 +123,16 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 UpdateScene :: proc(app:^sup.App, deltaTime:f32) { 
 	sup.UpdateBomber(app.bomber, app.bombs, deltaTime)
 	sup.UpdateBombs(app.bombs, deltaTime)
+	sup.UpdateBuckets(app.buckets)
 }
 
 BISCOTTI :: sdl.Color{ 0xe3, 0xc5, 0x65, 0xff }
 
 AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
+	context = runtime.default_context()
 	// --> INPUT
 	// Init
 	app := (^sup.App)(app)
-	context = runtime.default_context()
 	sup.StartFrame(&app.fps)
 	// Update objects
 	buf: [256]u8
@@ -131,6 +158,7 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 		0,
 		sdl.FPoint{ 0,0}
 	)
+	// RenderBombs
 	for bomb in app.bombs { 
 		if bomb.enabled { 
 			sup.RenderTexture(
@@ -143,15 +171,36 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 		}
 	}	
 
+	// RenderBuckets
+	for bucket in app.buckets.buckets { 
+		if bucket.enabled { 
+			sup.RenderTexture(
+				bucket.texture,
+				sup.GetSrcRect(bucket.texture),
+				sdl.FRect{bucket.position.x, bucket.position.y, bucket.width, bucket.height},
+				app,
+				0, sdl.FPoint{ 0, 0}
+			)
+		}
+	}
+
+	/* Issue:
+	   Game Rate and Frame Rate are not independent.
+		droping the initial frame rate lower than the length of a 
+		timer, ex 1fps will cause issues.  With this "Game" it is 
+		not of consequence 
+	*/
 	sdl.RenderPresent(app.renderer)
 	sup.EndFrame(&app.fps)
 	return sdl.AppResult.CONTINUE
 }
 
+initialMouse := true
+
 AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
+	context = runtime.default_context()
 	app := (^sup.App)(app)
 	offset :: 10
-	context = runtime.default_context()
 	#partial switch (event.type) {
 	case sdl.EventType.QUIT:
 		return sdl.AppResult.SUCCESS
@@ -163,6 +212,15 @@ AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 			return sdl.AppResult.SUCCESS
 		case sdl.Scancode.PAGEUP:
 			sup.SetTargetFPS(&app.fps, app.fps.targetFPS + 10)
+		}
+	case sdl.EventType.WINDOW_MOUSE_ENTER:
+		initialMouse = true
+	case sdl.EventType.MOUSE_MOTION:
+		if initialMouse { 
+			initialMouse = false
+			app.buckets.position.x = event.motion.x
+		} else { 
+			app.buckets.position.x += event.motion.xrel
 		}
 	}
 	return sdl.AppResult.CONTINUE

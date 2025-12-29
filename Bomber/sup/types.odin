@@ -21,6 +21,6 @@ App :: struct {
 	bomber: ^Bomber,
 	player: ^Player,
 	bombs:  Bombs,
-	bucket: ^Bucket
+	buckets: ^Buckets
 }
 
