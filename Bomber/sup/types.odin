@@ -7,6 +7,14 @@ import sdl_ttf "vendor:sdl3/ttf"
 Position :: sdl.FPoint
 
 
+GameState :: enum { 
+	START,
+	RUN,
+	PAUSE,
+	END,
+	QUIT
+}
+
 App :: struct {
 	_context: runtime.Context,
 	timer:    Timer,
@@ -16,13 +24,14 @@ App :: struct {
 	width:    i32,
 	height:   i32,
 	font:     ^sdl_ttf.Font,
-	text:     ^Text,
+	fpsText:     ^Text,
 	fps:      FPS,
 	bomber: ^Bomber,
 	player: ^Player,
 	level:  int,
 	bombs:  Bombs,
 	buckets: ^Buckets,
-	groundCollider: ^BoxCollider
+	groundCollider: ^BoxCollider,
+	gameState: GameState
 }
 

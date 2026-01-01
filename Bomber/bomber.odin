@@ -39,12 +39,13 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	app.window = new(sdl.Window)
 	app.renderer = new(sdl.Renderer)
 	app.font = sup.CreateFont("./assets/08-true-type-fonts/lazy.ttf", 22)
-	app.text = new(sup.Text)
-	app.text.color = sdl.Color{0xff, 0x00, 0x00, 0x00}
-	app.text.font = app.font
-	app.text.position = sdl.FPoint{0, 0}
+	app.fpsText = new(sup.Text)
+	app.fpsText.color = sdl.Color{0xff, 0x00, 0x00, 0x00}
+	app.fpsText.font = app.font
+	app.fpsText.position = sdl.FPoint{0, 0}
 	sup.SetTargetFPS(&app.fps, FrameRate)
 	app.fps.frameStartTicks = sdl.GetPerformanceCounter()
+	app.gameState = sup.GameState.START
 	app.level = 1
 	fmt.printfln("Initialize App - DONE")
 
@@ -149,8 +150,29 @@ InitBomberLevel :: proc(app:^sup.App) {
 		bucket.enabled = true
 	}
 }
+RenderPauseScreen :: proc(app:^sup.App) { 
+	buf: [256]u8
+	app.fpsText.text = fmt.bprintf(buf[:], "Continue? (Y / N)")
+	sup.UpdateText(app.renderer, app.fpsText)
+	textPosition := new(sup.Position)
+	defer free(textPosition)
+	textPosition.x = f32(app.width / 2 - app.fpsText.texture.texture.w / 2)
+	textPosition.y =  f32(app.height / 2)
+	sup.RenderText(app, app.fpsText, textPosition)
+}
 
-UpdateScene :: proc(app:^sup.App, deltaTime:f32) { 
+RenderStartScreen :: proc(app:^sup.App) { 
+	buf: [256]u8
+	app.fpsText.text = fmt.bprintf(buf[:], "Press any key to start")
+	sup.UpdateText(app.renderer, app.fpsText)
+	textPosition := new(sup.Position)
+	defer free(textPosition)
+	textPosition.x = f32(app.width / 2 - app.fpsText.texture.texture.w / 2)
+	textPosition.y =  f32(app.height / 2)
+	sup.RenderText(app, app.fpsText, textPosition)
+}
+
+UpdateGamePlay :: proc(app:^sup.App, deltaTime:f32) { 
 	// Physics?
 	sup.UpdateBomber(app.bomber, app.bombs, deltaTime)
 	sup.UpdateBombs(app.bombs, deltaTime)
@@ -177,29 +199,7 @@ UpdateScene :: proc(app:^sup.App, deltaTime:f32) {
 	}
 }
 
-BISCOTTI :: sdl.Color{ 0xe3, 0xc5, 0x65, 0xff }
-
-AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
-	context = runtime.default_context()
-	// --> INPUT
-	// Init
-	app := (^sup.App)(app)
-	sup.StartFrame(&app.fps)
-	// Update objects
-	buf: [256]u8
-	app.text.text = fmt.bprintf(buf[:], "%v fps", app.fps.fps)
-	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
-	// fmt.printfln("app.fps.delta: %v, sdl.NS_PER_SECOND: %v deltaTime: %v", app.fps.delta, sdl.NS_PER_SECOND, deltaTime)
-
-	// Actors
-	UpdateScene(app, deltaTime)
-	// Audio
-
-	// Render
-	sdl.SetRenderDrawColor(app.renderer, BISCOTTI.r, BISCOTTI.g, BISCOTTI.b, sdl.ALPHA_OPAQUE)
-	sdl.RenderClear(app.renderer)
-	sup.UpdateText(app.renderer, app.text)
-	sup.RenderText(app, app.text, &app.text.position)
+RenderGamePlay :: proc(app:^sup.App){ 
 	sdl.SetRenderDrawBlendMode(app.renderer, sdl.BLENDMODE_BLEND)
 	sup.RenderTexture(
 		app.bomber.texture, 
@@ -246,12 +246,43 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 		sdl.RenderRect(app.renderer, &bucket.collider.rect)	
 	}
 
-	/* Issue:
-	   Game Rate and Frame Rate are not independent.
-		droping the initial frame rate lower than the length of a 
-		timer, ex 1fps will cause issues.  With this "Game" it is 
-		not of consequence 
-	*/
+}
+BISCOTTI :: sdl.Color{ 0xe3, 0xc5, 0x65, 0xff }
+
+AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
+	context = runtime.default_context()
+	// --> INPUT
+	// Init
+	app := (^sup.App)(app)
+	sup.StartFrame(&app.fps)
+	// Update objects
+	buf: [256]u8
+	app.fpsText.text = fmt.bprintf(buf[:], "%v fps", app.fps.fps)
+	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
+	// fmt.printfln("app.fps.delta: %v, sdl.NS_PER_SECOND: %v deltaTime: %v", app.fps.delta, sdl.NS_PER_SECOND, deltaTime)
+
+	// Actors
+	#partial switch app.gameState { 
+	case sup.GameState.RUN:
+		UpdateGamePlay(app, deltaTime)
+	}
+	// Audio
+
+	// Render
+	sdl.SetRenderDrawColor(app.renderer, BISCOTTI.r, BISCOTTI.g, BISCOTTI.b, sdl.ALPHA_OPAQUE)
+	sdl.RenderClear(app.renderer)
+	sup.UpdateText(app.renderer, app.fpsText)
+	sup.RenderText(app, app.fpsText, &app.fpsText.position)
+
+	#partial switch app.gameState { 
+	case sup.GameState.RUN:
+		RenderGamePlay(app)
+	case sup.GameState.START:
+		RenderStartScreen(app)
+	case sup.GameState.PAUSE:
+		RenderPauseScreen(app)
+	}
+
 	sdl.RenderPresent(app.renderer)
 	sup.EndFrame(&app.fps)
 	return sdl.AppResult.CONTINUE
@@ -263,17 +294,63 @@ AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 	context = runtime.default_context()
 	app := (^sup.App)(app)
 	offset :: 10
-	#partial switch (event.type) {
+	// Global quit handle
+   	#partial switch (event.type) {
 	case sdl.EventType.QUIT:
 		return sdl.AppResult.SUCCESS
 	case sdl.EventType.KEY_DOWN:
 		#partial switch (event.key.scancode) {
 		case sdl.Scancode.Q:
-			fallthrough
-		case sdl.Scancode.ESCAPE:
+			app.gameState = sup.GameState.QUIT
 			return sdl.AppResult.SUCCESS
 		case sdl.Scancode.PAGEUP:
-			sup.SetTargetFPS(&app.fps, app.fps.targetFPS + 10)
+			sup.SetTargetFPS(&app.fps, app.fps.targetFPS + offset)
+		}
+	}
+
+	//  GameState switch
+	#partial switch (app.gameState) { 
+	case sup.GameState.RUN:
+		return GamePlayEvent(app, event)
+	case sup.GameState.START:
+		return StartEvent(app, event)
+	case sup.GameState.PAUSE:
+		return PauseEvent(app, event)
+	}
+	return sdl.AppResult.CONTINUE
+}
+
+PauseEvent :: proc(app:^sup.App, event: ^sdl.Event) -> sdl.AppResult { 
+	#partial switch (event.type) {
+	case sdl.EventType.KEY_DOWN:
+		#partial switch (event.key.scancode) { 
+		case sdl.Scancode.N:
+			app.gameState = sup.GameState.QUIT
+			return sdl.AppResult.SUCCESS
+		case sdl.Scancode.ESCAPE:
+			fallthrough	
+		case sdl.Scancode.Y:
+			app.gameState = sup.GameState.RUN
+		}
+	}
+	return sdl.AppResult.CONTINUE
+}
+
+StartEvent :: proc(app:^sup.App, event: ^sdl.Event) -> sdl.AppResult { 
+	#partial switch (event.type) {
+	case sdl.EventType.KEY_DOWN:
+		app.gameState = sup.GameState.RUN
+	}
+	return sdl.AppResult.CONTINUE
+}
+
+GamePlayEvent :: proc(app:^sup.App, event: ^sdl.Event) -> sdl.AppResult { 
+	#partial switch (event.type) {
+	case sdl.EventType.KEY_DOWN:
+		#partial switch (event.key.scancode) {
+		case sdl.Scancode.ESCAPE:
+			app.gameState = sup.GameState.PAUSE
+			return sdl.AppResult.CONTINUE
 		}
 	case sdl.EventType.WINDOW_MOUSE_ENTER:
 		initialMouse = true
