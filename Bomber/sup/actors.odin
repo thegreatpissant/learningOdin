@@ -64,8 +64,8 @@ Bomb :: struct {
 }
 
 Player :: struct { 
-	points : i32,
-	// difficulty : Difficulty enum
+	score : i32,
+	lives: int,
 }
 
 SpawnBomb :: proc(bombs:Bombs, position: Position) { 

@@ -43,6 +43,10 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	app.fpsText.color = sdl.Color{0xff, 0x00, 0x00, 0x00}
 	app.fpsText.font = app.font
 	app.fpsText.position = sdl.FPoint{0, 0}
+	app.playerScoreText = new(sup.Text)
+	app.playerScoreText.color = sdl.Color{0xff, 0x00, 0x00, 0x00}
+	app.playerScoreText.font = app.font
+	app.playerScoreText.position = sdl.FPoint{ f32(app.width / 2), 0}
 	sup.SetTargetFPS(&app.fps, FrameRate)
 	app.fps.frameStartTicks = sdl.GetPerformanceCounter()
 	app.gameState = sup.GameState.START
@@ -121,16 +125,17 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	app.groundCollider.rect = { 0, f32(app.height) - 50, f32(app.width), f32(app.height)}
 	fmt.printfln("Initialize Actors - DONE")
 
-	InitBomberLevel(app)
+	InitBomber(app)
 
 	return sdl.AppResult.CONTINUE
 }
 
 InitPlayer :: proc(app:^sup.App) { 
-	app.player.points = 0
+	app.player.score = 0
+	app.player.lives = 1
 }
 
-InitBomberLevel :: proc(app:^sup.App) { 
+InitBomber :: proc(app:^sup.App) { 
 	assetScale :f32= 1.75
 	bucketWidth : f32 = (f32(app.buckets.buckets[0].texture.frameWidth) / 5 ) / assetScale
 	bombSpeed :f32 = f32(app.bombs[0].height) * 2
@@ -142,6 +147,7 @@ InitBomberLevel :: proc(app:^sup.App) {
 	app.bomber.spawnTimer.tickDelay = bomberSpawnTimer
 	for bomb in app.bombs { 
 		bomb.speed = bombSpeed
+		bomb.enabled = false
 	}
 
 	app.buckets.position.x = f32(app.width) / 2
@@ -150,6 +156,18 @@ InitBomberLevel :: proc(app:^sup.App) {
 		bucket.enabled = true
 	}
 }
+
+RenderEndScreen :: proc(app:^sup.App) { 
+	buf: [256]u8
+	app.fpsText.text = fmt.bprintf(buf[:], "Play Again? (Y / N)")
+	sup.UpdateText(app.renderer, app.fpsText)
+	textPosition := new(sup.Position)
+	defer free(textPosition)
+	textPosition.x = f32(app.width / 2 - app.fpsText.texture.texture.w / 2)
+	textPosition.y =  f32(app.height / 2)
+	sup.RenderText(app, app.fpsText, textPosition)
+}
+
 RenderPauseScreen :: proc(app:^sup.App) { 
 	buf: [256]u8
 	app.fpsText.text = fmt.bprintf(buf[:], "Continue? (Y / N)")
@@ -181,8 +199,16 @@ UpdateGamePlay :: proc(app:^sup.App, deltaTime:f32) {
 	// Collisions
 	//  bombs with botom of the game board
 	for bomb in app.bombs { 
-		if sup.Collides(&bomb.collider.rect, &app.groundCollider.rect) { 
+		if bomb.enabled && sup.Collides(&bomb.collider.rect, &app.groundCollider.rect) { 
 			bomb.enabled = false
+			app.player.lives -= 1
+			if app.player.lives < 0 { 
+				app.gameState = sup.GameState.END
+			} else { 
+				InitBomber(app)
+				app.gameState = sup.GameState.START
+			}
+			return
 		}
 	}
 	//  bombs with the buckets
@@ -192,6 +218,7 @@ UpdateGamePlay :: proc(app:^sup.App, deltaTime:f32) {
 		}
 		for bucket in app.buckets.buckets { 
 			if sup.Collides(&bucket.collider.rect, &bomb.collider.rect) { 
+				app.player.score += 10
 				bomb.enabled = false
 				continue
 			}
@@ -258,6 +285,9 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	// Update objects
 	buf: [256]u8
 	app.fpsText.text = fmt.bprintf(buf[:], "%v fps", app.fps.fps)
+	sup.UpdateText(app.renderer, app.fpsText)
+	app.playerScoreText.text = fmt.bprintf(buf[:], "Lives: %d\tScore: %d", app.player.lives, app.player.score)
+	sup.UpdateText(app.renderer, app.playerScoreText)
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
 	// fmt.printfln("app.fps.delta: %v, sdl.NS_PER_SECOND: %v deltaTime: %v", app.fps.delta, sdl.NS_PER_SECOND, deltaTime)
 
@@ -271,8 +301,8 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	// Render
 	sdl.SetRenderDrawColor(app.renderer, BISCOTTI.r, BISCOTTI.g, BISCOTTI.b, sdl.ALPHA_OPAQUE)
 	sdl.RenderClear(app.renderer)
-	sup.UpdateText(app.renderer, app.fpsText)
 	sup.RenderText(app, app.fpsText, &app.fpsText.position)
+	sup.RenderText(app, app.playerScoreText, &app.playerScoreText.position)
 
 	#partial switch app.gameState { 
 	case sup.GameState.RUN:
@@ -281,6 +311,8 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 		RenderStartScreen(app)
 	case sup.GameState.PAUSE:
 		RenderPauseScreen(app)
+	case sup.GameState.END:
+		RenderEndScreen(app)
 	}
 
 	sdl.RenderPresent(app.renderer)
@@ -316,6 +348,26 @@ AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 		return StartEvent(app, event)
 	case sup.GameState.PAUSE:
 		return PauseEvent(app, event)
+	case sup.GameState.END:
+		return EndEvent(app, event)
+	}
+	return sdl.AppResult.CONTINUE
+}
+
+EndEvent :: proc(app:^sup.App, event: ^sdl.Event) -> sdl.AppResult { 
+	#partial switch (event.type) {
+	case sdl.EventType.KEY_DOWN:
+		#partial switch (event.key.scancode) { 
+		case sdl.Scancode.N:
+			app.gameState = sup.GameState.QUIT
+			return sdl.AppResult.SUCCESS
+		case sdl.Scancode.ESCAPE:
+			fallthrough	
+		case sdl.Scancode.Y:
+			InitPlayer(app)
+			InitBomber(app)
+			app.gameState = sup.GameState.START
+		}
 	}
 	return sdl.AppResult.CONTINUE
 }

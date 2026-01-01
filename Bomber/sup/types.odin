@@ -28,6 +28,7 @@ App :: struct {
 	fps:      FPS,
 	bomber: ^Bomber,
 	player: ^Player,
+	playerScoreText: ^Text,
 	level:  int,
 	bombs:  Bombs,
 	buckets: ^Buckets,
