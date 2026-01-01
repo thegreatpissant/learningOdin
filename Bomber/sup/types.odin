@@ -20,7 +20,9 @@ App :: struct {
 	fps:      FPS,
 	bomber: ^Bomber,
 	player: ^Player,
+	level:  int,
 	bombs:  Bombs,
-	buckets: ^Buckets
+	buckets: ^Buckets,
+	groundCollider: ^BoxCollider
 }
 

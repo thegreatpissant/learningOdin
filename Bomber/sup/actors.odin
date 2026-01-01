@@ -75,6 +75,8 @@ SpawnBomb :: proc(bombs:Bombs, position: Position) {
 		if !bomb.enabled { 
 			bomb.position.x  = position.x - bomb.width / 2
 			bomb.position.y = position.y 
+			bomb.collider.rect.x = bomb.position.x
+			bomb.collider.rect.y = bomb.position.y
 			bomb.enabled = true
 			return
 		}
@@ -84,9 +86,7 @@ UpdateBombs :: proc(bombs:Bombs, deltatime: f32) {
 	for bomb in bombs { 
 		if bomb.enabled { 
 			bomb.position.y += deltatime * bomb.speed
-			if bomb.position.y > 480 { 
-				bomb.enabled = false
-			}
+			bomb.collider.rect.y = bomb.position.y
 		}
 	}
 }
@@ -112,6 +112,5 @@ UpdateBuckets :: proc(buckets:^Buckets) {
 		bucket.position.x = buckets.position.x
 		bucket.collider.rect.x = buckets.position.x
 		bucket.collider.rect.w = bucket.width
-		bucket.collider.rect.h = bucket.height
 	}
 }

@@ -45,6 +45,7 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	app.text.position = sdl.FPoint{0, 0}
 	sup.SetTargetFPS(&app.fps, FrameRate)
 	app.fps.frameStartTicks = sdl.GetPerformanceCounter()
+	app.level = 1
 	fmt.printfln("Initialize App - DONE")
 
 	fmt.printfln("Initialize Window")
@@ -69,11 +70,8 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	}
 	app.bomber.width = (f32(app.bomber.texture.frameWidth) / 4) / assetScale
 	app.bomber.height = (f32(app.bomber.texture.height) / 4) / assetScale
-	app.bomber.spawnTimer.tickDelay = 500000000
-	app.bomber.direction = 1
 	app.bomber.speed = app.bomber.width
 	sup.StartTimer(&app.bomber.spawnTimer)
-	app.bomber.position.x = f32(app.width / 2)
 	app.bomber.position.y = app.bomber.height 
 	//  Bomb spawn point
 	app.bomber.spawnPoint.x = app.bomber.width / 2
@@ -91,12 +89,14 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 		bomb.position.y = f32(app.width / 3 * 2)
 		bomb.width = (f32(bomb.texture.frameWidth) / 5 ) / assetScale
 		bomb.height = (f32(bomb.texture.height) / 5 ) / assetScale
-		bomb.speed = f32(bomb.height) * 2
+		bomb.collider.rect.x = bomb.position.x
+		bomb.collider.rect.y = bomb.position.y
+		bomb.collider.rect.w = bomb.width
+		bomb.collider.rect.h = bomb.height
 		append(&app.bombs, bomb)
 	}
 
 	app.buckets = new(sup.Buckets)
-	app.buckets.position.x = f32(app.width) / 2
 	app.buckets.position.y = f32(app.height) / 2
 	bucketTexture : ^sup.Texture
 	if !sup.LoadTexture(app, "./assets/bomber/bucket.png", &bucketTexture) { 
@@ -105,25 +105,76 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	for i in 0..<len(app.buckets.buckets) { 
 		bucket := new(sup.Bucket)
 		bucket.texture = bucketTexture
-		bucket.width = (f32(bucket.texture.frameWidth) / 5 ) / assetScale
 		bucket.height = (f32(bucket.texture.height) / 5 ) / assetScale * .7
 		bucket.position.x = 0
 		bucket.position.y = app.buckets.position.y + f32(i) * bucket.height  + f32(i) * bucket.height * .7
-		bucket.enabled = true
+		bucket.collider.rect.x = bucket.position.x
+		bucket.collider.rect.y = bucket.position.y
+		bucket.collider.rect.h = bucket.height / 5
 		app.buckets.buckets[i] =  bucket
 	}
-
 	app.player = new(sup.Player)
-	app.player.points = 0
+	InitPlayer(app)
+
+	app.groundCollider = new(sup.BoxCollider)
+	app.groundCollider.rect = { 0, f32(app.height) - 50, f32(app.width), f32(app.height)}
 	fmt.printfln("Initialize Actors - DONE")
+
+	InitBomberLevel(app)
 
 	return sdl.AppResult.CONTINUE
 }
 
+InitPlayer :: proc(app:^sup.App) { 
+	app.player.points = 0
+}
+
+InitBomberLevel :: proc(app:^sup.App) { 
+	assetScale :f32= 1.75
+	bucketWidth : f32 = (f32(app.buckets.buckets[0].texture.frameWidth) / 5 ) / assetScale
+	bombSpeed :f32 = f32(app.bombs[0].height) * 2
+	bomberSpeed :f32 = app.bomber.speed
+	bomberSpawnTimer :u64 = 500000000
+
+	app.bomber.direction = 1
+	app.bomber.position.x = f32(app.width / 2)
+	app.bomber.spawnTimer.tickDelay = bomberSpawnTimer
+	for bomb in app.bombs { 
+		bomb.speed = bombSpeed
+	}
+
+	app.buckets.position.x = f32(app.width) / 2
+	for bucket in app.buckets.buckets { 
+		bucket.width = bucketWidth
+		bucket.enabled = true
+	}
+}
+
 UpdateScene :: proc(app:^sup.App, deltaTime:f32) { 
+	// Physics?
 	sup.UpdateBomber(app.bomber, app.bombs, deltaTime)
 	sup.UpdateBombs(app.bombs, deltaTime)
 	sup.UpdateBuckets(app.buckets)
+
+	// Collisions
+	//  bombs with botom of the game board
+	for bomb in app.bombs { 
+		if sup.Collides(&bomb.collider.rect, &app.groundCollider.rect) { 
+			bomb.enabled = false
+		}
+	}
+	//  bombs with the buckets
+	for bomb in app.bombs { 
+		if !bomb.enabled { 
+			continue
+		}
+		for bucket in app.buckets.buckets { 
+			if sup.Collides(&bucket.collider.rect, &bomb.collider.rect) { 
+				bomb.enabled = false
+				continue
+			}
+		}
+	}
 }
 
 BISCOTTI :: sdl.Color{ 0xe3, 0xc5, 0x65, 0xff }
@@ -182,6 +233,17 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 				0, sdl.FPoint{ 0, 0}
 			)
 		}
+	}
+
+	sdl.SetRenderDrawColor(app.renderer, 0xff, 0x00, 0x00, sdl.ALPHA_OPAQUE)
+	sdl.RenderRect(app.renderer, &app.groundCollider.rect)
+	for bomb in app.bombs { 
+		if bomb.enabled { 
+			sdl.RenderRect(app.renderer, &bomb.collider.rect)
+		}
+	}
+	for bucket in app.buckets.buckets { 
+		sdl.RenderRect(app.renderer, &bucket.collider.rect)	
 	}
 
 	/* Issue:

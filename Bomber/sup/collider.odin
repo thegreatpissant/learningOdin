@@ -6,15 +6,18 @@ BoxCollider :: struct {
 	rect : sdl.FRect
 }
 
-Collides :: proc(lBox:^BoxCollider, rBox:^BoxCollider) -> bool { 
-	lMinX := lBox.rect.x
-	lMaxX := lBox.rect.x + lBox.rect.w
-	lMinY := lBox.rect.y
-	lMaxY := lBox.rect.y + lBox.rect.h
-	rMinX := rBox.rect.x
-	rMaxX := rBox.rect.x + rBox.rect.w
-	rMinY := rBox.rect.y
-	rMaxY := rBox.rect.y + rBox.rect.h
+Collides :: proc(lBox:^sdl.FRect, rBox:^sdl.FRect) -> bool { 
+	// EWWWWWWWW
+	return sdl.HasRectIntersection(sdl.Rect{ x=i32(lBox.x), y=i32(lBox.y), w=i32(lBox.w), h=i32(lBox.h)}, sdl.Rect{ x=i32(rBox.x), y=i32(rBox.y), w=i32(rBox.w), h=i32(rBox.h)})
+	/** 
+	lMinX := lBox.x
+	lMaxX := lBox.x + lBox.w
+	lMinY := lBox.y
+	lMaxY := lBox.y + lBox.h
+	rMinX := rBox.x
+	rMaxX := rBox.x + rBox.w
+	rMinY := rBox.y
+	rMaxY := rBox.y + rBox.h
 
 	if lMinX >= rMaxX { 
 		return false
@@ -31,6 +34,7 @@ Collides :: proc(lBox:^BoxCollider, rBox:^BoxCollider) -> bool {
 	}
 
 	return true
+	*/
 }
 
 RenderBoxCollider :: proc(app: ^App, collider:^BoxCollider, color:sdl.Color)
