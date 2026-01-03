@@ -11,6 +11,8 @@ GameState :: enum {
 	START,
 	RUN,
 	PAUSE,
+	LOSELEVEL,
+	NEXTLEVEL,
 	END,
 	QUIT
 }
@@ -33,6 +35,8 @@ App :: struct {
 	bombs:  Bombs,
 	buckets: ^Buckets,
 	groundCollider: ^BoxCollider,
-	gameState: GameState
+	gameState: GameState,
+	bombBurstTimer: Timer,
+	bursting : bool,
 }
 
