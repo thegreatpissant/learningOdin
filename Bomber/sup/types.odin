@@ -38,5 +38,6 @@ App :: struct {
 	gameState: GameState,
 	bombBurstTimer: Timer,
 	bursting : bool,
+	nextLevelTimer: Timer,
 }
 

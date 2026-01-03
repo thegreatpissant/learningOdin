@@ -14,6 +14,7 @@ Bomber :: struct {
 	spawnTimer: Timer,	
 	spawnPoint : Position,
 	nextBomb : int,
+	bombsCaught : int
 }
 
 Buckets :: struct { 

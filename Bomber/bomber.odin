@@ -53,6 +53,7 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	app.level = 1
 	app.bombBurstTimer.tickDelay = 100000000
 	app.bursting = false
+	app.nextLevelTimer.tickDelay = 5 * sdl.NS_PER_SECOND
 	fmt.printfln("Initialize App - DONE")
 
 	fmt.printfln("Initialize Window")
@@ -85,7 +86,6 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	//  Bomb spawn point
 	app.bomber.spawnPoint.x = app.bomber.width / 2
 	app.bomber.spawnPoint.y = app.bomber.height
-	app.bomber.nextBomb = len(app.bombs)
 
 	bombTexture :^sup.Texture 
 	if !sup.LoadTexture(app, "./assets/bomber/bomb.png", &bombTexture) { 
@@ -93,13 +93,13 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	}
 	for i in 0..<len(app.bombs) { 
 		bomb :^sup.Bomb= new(sup.Bomb)
+		app.bombs[i] = bomb
 		bomb.texture = bombTexture
 		bomb.enabled = false
 		bomb.width = (f32(bomb.texture.frameWidth) / 5 ) / assetScale
 		bomb.height = (f32(bomb.texture.height) / 5 ) / assetScale
 		bomb.collider.rect.w = bomb.width
 		bomb.collider.rect.h = bomb.height
-		app.bombs[i] = bomb
 	}
 
 	app.buckets = new(sup.Buckets)
@@ -143,6 +143,7 @@ InitBomber :: proc(app:^sup.App) {
 	bomberSpeed :f32 = app.bomber.width * 2
 	bomberSpawnTimer :u64 = 700000000
 
+	app.bomber.bombsCaught = 0
 	app.bomber.direction = 1
 	app.bomber.position.x = f32(app.width / 2)
 	app.bomber.spawnTimer.tickDelay = bomberSpawnTimer
@@ -151,12 +152,13 @@ InitBomber :: proc(app:^sup.App) {
 		bomb.speed = bombSpeed
 		bomb.enabled = false
 	}
-
+	app.bomber.nextBomb = len(app.bombs)
 	app.buckets.position.x = f32(app.width) / 2
 	for bucket in app.buckets.buckets { 
 		bucket.width = bucketWidth
 		bucket.enabled = true
 	}
+	sup.StartTimer(&app.bomber.spawnTimer)
 }
 
 RenderEndScreen :: proc(app:^sup.App) { 
@@ -219,6 +221,14 @@ PlayBombBursts :: proc(app:^sup.App, deltaTime:f32) {
 	}
 }
 
+UpdateNextLevel :: proc (app:^sup.App, deltaTime:f32) { 
+	if sup.Ticked(&app.nextLevelTimer) { 
+		app.level += 1
+		app.gameState = sup.GameState.RUN
+		InitBomber(app)
+	}
+}
+
 UpdateGamePlay :: proc(app:^sup.App, deltaTime:f32) { 
 	// Physics?
 	sup.UpdateBomber(app.bomber, app.bombs, deltaTime)
@@ -228,29 +238,34 @@ UpdateGamePlay :: proc(app:^sup.App, deltaTime:f32) {
 	// Collisions
 	//  bombs with botom of the game board
 	for bomb in app.bombs { 
-		if bomb.enabled && sup.Collides(&bomb.collider.rect, &app.groundCollider.rect) { 
-			bomb.enabled = false
+		if !bomb.enabled { 
+				continue
+		}	
+		if sup.Collides(&bomb.collider.rect, &app.groundCollider.rect) { 
 			app.gameState = sup.GameState.LOSELEVEL
 			app.bursting = true
 			sup.StartTimer(&app.bombBurstTimer)
 			app.player.lives -= 1
 			return
 		}
-	}
-	//  bombs with the buckets
-	for bomb in app.bombs { 
-		if !bomb.enabled { 
-			continue
-		}
+
+		//  bombs with the buckets
 		for bucket in app.buckets.buckets { 
 			if sup.Collides(&bucket.collider.rect, &bomb.collider.rect) { 
 				app.player.score += 10
 				bomb.enabled = false
+				app.bomber.bombsCaught += 1
 				continue
 			}
 		}
 	}
-	//  buckets for the edge of the app
+
+	if app.bomber.bombsCaught >= len(app.bombs) { 
+		app.gameState = sup.GameState.NEXTLEVEL
+		sup.StartTimer(&app.nextLevelTimer)
+	}	
+
+	//  buckets with the edge of the app
 	if app.buckets.position.x < 0 { 
 		app.buckets.position = 0
 	}
@@ -320,8 +335,9 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	buf: [256]u8
 	app.fpsText.text = fmt.bprintf(buf[:], "%v fps", app.fps.fps)
 	sup.UpdateText(app.renderer, app.fpsText)
-	app.playerScoreText.text = fmt.bprintf(buf[:], "Lives: %d\tScore: %d", app.player.lives, app.player.score)
+	app.playerScoreText.text = fmt.bprintf(buf[:], "Level: %d  Score: %d   lives: %d", app.level, app.player.score, app.player.lives)
 	sup.UpdateText(app.renderer, app.playerScoreText)
+	app.playerScoreText.position.x = f32(app.width / 2 - app.playerScoreText.texture.texture.w / 2)
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
 	// fmt.printfln("app.fps.delta: %v, sdl.NS_PER_SECOND: %v deltaTime: %v", app.fps.delta, sdl.NS_PER_SECOND, deltaTime)
 
@@ -331,6 +347,8 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 		UpdateGamePlay(app, deltaTime)
 	case sup.GameState.LOSELEVEL:
 		PlayBombBursts(app, deltaTime)
+	case sup.GameState.NEXTLEVEL:
+		UpdateNextLevel(app, deltaTime)
 	}
 	// Audio
 
@@ -344,6 +362,8 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	case sup.GameState.RUN:
 		fallthrough
 	case sup.GameState.LOSELEVEL:
+		fallthrough
+	case sup.GameState.NEXTLEVEL:
 		RenderGamePlay(app)
 	case sup.GameState.START:
 		RenderStartScreen(app)
@@ -383,6 +403,8 @@ AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 	case sup.GameState.RUN:
 		fallthrough
 	case sup.GameState.LOSELEVEL:
+		fallthrough
+	case sup.GameState.NEXTLEVEL:
 		return GamePlayEvent(app, event)
 	case sup.GameState.START:
 		return StartEvent(app, event)
