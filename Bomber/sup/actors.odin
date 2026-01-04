@@ -32,7 +32,7 @@ Bucket :: struct {
 	enabled: bool
 }
 
-Bombs :: [10]^Bomb
+Bombs :: [15]^Bomb
 
 Bomb :: struct { 
 	enabled : bool,

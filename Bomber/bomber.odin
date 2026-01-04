@@ -53,7 +53,7 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	app.level = 1
 	app.bombBurstTimer.tickDelay = 100000000
 	app.bursting = false
-	app.nextLevelTimer.tickDelay = 5 * sdl.NS_PER_SECOND
+	app.nextLevelTimer.tickDelay = 2 * sdl.NS_PER_SECOND
 	fmt.printfln("Initialize App - DONE")
 
 	fmt.printfln("Initialize Window")
@@ -138,10 +138,12 @@ InitPlayer :: proc(app:^sup.App) {
 
 InitBomber :: proc(app:^sup.App) { 
 	assetScale :f32= 1.75
+
+	// Level specific
 	bucketWidth : f32 = (f32(app.buckets.buckets[0].texture.frameWidth) / 5 ) / assetScale
-	bombSpeed :f32 = f32(app.bombs[0].height) * 2
-	bomberSpeed :f32 = app.bomber.width * 2
-	bomberSpawnTimer :u64 = 700000000
+	bombSpeed :f32 = f32(app.bombs[0].height) * 2 * f32(app.level)
+	bomberSpeed :f32 = app.bomber.width * 2 * f32(app.level)
+	bomberSpawnTimer :u64 = 700000000 
 
 	app.bomber.bombsCaught = 0
 	app.bomber.direction = 1
@@ -161,37 +163,49 @@ InitBomber :: proc(app:^sup.App) {
 	sup.StartTimer(&app.bomber.spawnTimer)
 }
 
+RenderLevelSuccess :: proc(app:^sup.App) { 
+	buf: [256]u8
+	app.fpsText.text = fmt.bprintf(buf[:], "Get Ready for the Next Level")
+	sup.UpdateText(app.renderer, app.fpsText)
+	textPosition : sup.Position
+	textPosition.x = f32(app.width / 2 - app.fpsText.texture.texture.w / 2)
+	textPosition.y =  f32(app.height / 2 - app.fpsText.texture.texture.h )
+	sup.RenderText(app, app.fpsText, &textPosition)
+}
+
 RenderEndScreen :: proc(app:^sup.App) { 
 	buf: [256]u8
+	app.fpsText.text = fmt.bprintf(buf[:], "Game Over")
+	sup.UpdateText(app.renderer, app.fpsText)
+	textPosition : sup.Position
+	textPosition.x = f32(app.width / 2 - app.fpsText.texture.texture.w / 2)
+	textPosition.y =  f32(app.height / 2 - app.fpsText.texture.texture.h )
+	sup.RenderText(app, app.fpsText, &textPosition)
 	app.fpsText.text = fmt.bprintf(buf[:], "Play Again? (Y / N)")
 	sup.UpdateText(app.renderer, app.fpsText)
-	textPosition := new(sup.Position)
-	defer free(textPosition)
 	textPosition.x = f32(app.width / 2 - app.fpsText.texture.texture.w / 2)
-	textPosition.y =  f32(app.height / 2)
-	sup.RenderText(app, app.fpsText, textPosition)
+	textPosition.y = f32(app.height /2 + app.fpsText.texture.height)
+	sup.RenderText(app, app.fpsText, &textPosition)
 }
 
 RenderPauseScreen :: proc(app:^sup.App) { 
 	buf: [256]u8
 	app.fpsText.text = fmt.bprintf(buf[:], "Continue? (Y / N)")
 	sup.UpdateText(app.renderer, app.fpsText)
-	textPosition := new(sup.Position)
-	defer free(textPosition)
+	textPosition : sup.Position
 	textPosition.x = f32(app.width / 2 - app.fpsText.texture.texture.w / 2)
 	textPosition.y =  f32(app.height / 2)
-	sup.RenderText(app, app.fpsText, textPosition)
+	sup.RenderText(app, app.fpsText, &textPosition)
 }
 
 RenderStartScreen :: proc(app:^sup.App) { 
 	buf: [256]u8
 	app.fpsText.text = fmt.bprintf(buf[:], "Press any key to start")
 	sup.UpdateText(app.renderer, app.fpsText)
-	textPosition := new(sup.Position)
-	defer free(textPosition)
+	textPosition : sup.Position
 	textPosition.x = f32(app.width / 2 - app.fpsText.texture.texture.w / 2)
 	textPosition.y =  f32(app.height / 2)
-	sup.RenderText(app, app.fpsText, textPosition)
+	sup.RenderText(app, app.fpsText, &textPosition)
 }
 
 PlayBombBursts :: proc(app:^sup.App, deltaTime:f32) { 
@@ -222,6 +236,7 @@ PlayBombBursts :: proc(app:^sup.App, deltaTime:f32) {
 }
 
 UpdateNextLevel :: proc (app:^sup.App, deltaTime:f32) { 
+
 	if sup.Ticked(&app.nextLevelTimer) { 
 		app.level += 1
 		app.gameState = sup.GameState.RUN
@@ -335,7 +350,7 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	buf: [256]u8
 	app.fpsText.text = fmt.bprintf(buf[:], "%v fps", app.fps.fps)
 	sup.UpdateText(app.renderer, app.fpsText)
-	app.playerScoreText.text = fmt.bprintf(buf[:], "Level: %d  Score: %d   lives: %d", app.level, app.player.score, app.player.lives)
+	app.playerScoreText.text = fmt.bprintf(buf[:], "Level: %d  Score: %d   lives: %d", app.level, app.player.score, app.player.lives < 0?0:app.player.lives)
 	sup.UpdateText(app.renderer, app.playerScoreText)
 	app.playerScoreText.position.x = f32(app.width / 2 - app.playerScoreText.texture.texture.w / 2)
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
@@ -362,9 +377,9 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	case sup.GameState.RUN:
 		fallthrough
 	case sup.GameState.LOSELEVEL:
-		fallthrough
-	case sup.GameState.NEXTLEVEL:
 		RenderGamePlay(app)
+	case sup.GameState.NEXTLEVEL:
+		RenderLevelSuccess(app)
 	case sup.GameState.START:
 		RenderStartScreen(app)
 	case sup.GameState.PAUSE:
