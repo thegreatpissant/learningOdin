@@ -88,18 +88,24 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	app.bomber.spawnPoint.y = app.bomber.height
 
 	bombTexture :^sup.Texture 
-	if !sup.LoadTexture(app, "./assets/bomber/bomb.png", &bombTexture) { 
+	if !sup.LoadTexture(app, "./assets/bomber/bomb.png", &bombTexture, 1) { 
+		fmt.printfln("Failed to load bomb texture: %s", sdl.GetError())
+	}
+	bombBlowUpTexture:^sup.Texture
+	if !sup.LoadTexture(app, "./assets/bomber/bomb-sheet.png", &bombBlowUpTexture, 4) { 
 		fmt.printfln("Failed to load bomb texture: %s", sdl.GetError())
 	}
 	for i in 0..<len(app.bombs) { 
 		bomb :^sup.Bomb= new(sup.Bomb)
 		app.bombs[i] = bomb
 		bomb.texture = bombTexture
+		bomb.blowUpTexture = bombBlowUpTexture
 		bomb.enabled = false
 		bomb.width = (f32(bomb.texture.frameWidth) / 5 ) / assetScale
 		bomb.height = (f32(bomb.texture.height) / 5 ) / assetScale
 		bomb.collider.rect.w = bomb.width
 		bomb.collider.rect.h = bomb.height
+		bomb.animation.texture = bomb.texture
 	}
 
 	app.buckets = new(sup.Buckets)
@@ -151,8 +157,10 @@ InitBomber :: proc(app:^sup.App) {
 	app.bomber.spawnTimer.tickDelay = bomberSpawnTimer
 	app.bomber.speed = bomberSpeed
 	for bomb in app.bombs { 
-		bomb.speed = bombSpeed
 		bomb.enabled = false
+		bomb.animation.texture = bomb.texture
+		bomb.speed = bombSpeed
+		bomb.blowingUp = false
 	}
 	app.bomber.nextBomb = len(app.bombs)
 	app.buckets.position.x = f32(app.width) / 2
@@ -212,9 +220,11 @@ PlayBombBursts :: proc(app:^sup.App, deltaTime:f32) {
 	//  iterate through thte bombs and blow them up
 	if app.bursting && sup.Ticked(&app.bombBurstTimer) { 
 		for i := len(app.bombs) - 1; i >= 0; i -=1 { 
-			if app.bombs[i].enabled { 
-				//  set to blowupTexture, disable for now
-				app.bombs[i].enabled = false
+			fmt.printfln("bomb #%v",app.bombs[i])
+			if app.bombs[i].enabled && !app.bombs[i].blowingUp { 
+				fmt.printfln("bursting bomb #%d",i)
+				sup.BlowUpBomb(app.bombs[i])
+			fmt.printfln("bomb #%v",app.bombs[i])
 				return
 			}
 		}
@@ -305,7 +315,7 @@ RenderGamePlay :: proc(app:^sup.App){
 		if bomb.enabled { 
 			sup.RenderTexture(
 				bomb.texture,
-				sup.GetSrcRect(bomb.texture),
+				sup.GetSrcRectForAnimation(&bomb.animation),
 				sdl.FRect{bomb.position.x, bomb.position.y, bomb.width, bomb.height},
 				app,
 				0, sdl.FPoint{ 0, 0}

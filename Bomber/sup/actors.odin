@@ -35,14 +35,18 @@ Bucket :: struct {
 Bombs :: [15]^Bomb
 
 Bomb :: struct { 
+	render : bool,
 	enabled : bool,
+	blowingUp: bool,
 	position: Position,
 	posX: f32,
 	width: f32,
 	height: f32,
 	speed :f32,
 	texture: ^Texture,
-	collider: BoxCollider
+	collider: BoxCollider,
+	animation: Animation,
+	blowUpTexture: ^Texture,
 }
 
 Player :: struct { 
@@ -50,6 +54,12 @@ Player :: struct {
 	lives: int,
 }
 
+BlowUpBomb :: proc(bomb:^Bomb) { 
+	bomb.animation.texture = bomb.blowUpTexture
+	bomb.animation.deltaTime = 0
+	bomb.blowingUp = true
+	bomb.speed = 0
+}
 SpawnBomb :: proc(bombs:Bombs, bombI:int, position: Position) { 
 	bombs[bombI].position.x  = position.x - bombs[bombI].width / 2
 	bombs[bombI].position.y = position.y 
@@ -60,6 +70,7 @@ SpawnBomb :: proc(bombs:Bombs, bombI:int, position: Position) {
 UpdateBombs :: proc(bombs:Bombs, deltatime: f32) {
 	for bomb in bombs { 
 		if bomb.enabled { 
+			UpdateAnimation(&bomb.animation, u64(deltatime))
 			bomb.position.y += deltatime * bomb.speed
 			bomb.collider.rect.y = bomb.position.y
 		}
