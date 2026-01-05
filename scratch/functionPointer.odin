@@ -3,14 +3,18 @@ package functionpointers
 import "core:fmt"
 
 Hello1 :: proc() { 
-	fmt.println("Hello world...One")
+	fmt.println("Hello1 Hello world...One")
 }
 Hello2 :: proc(name:string) { 
-	fmt.printfln("hello %s, two!", name)
+	fmt.printfln("Hello2 hello %s, two!", name)
 }
 
 PrintName :: proc(name:Name) { 
-	fmt.printfln("My name is: %s %s", name.first, name.last)
+	fmt.printfln("PrintName: My name is: %s %s", name.first, name.last)
+}
+
+PrintHello :: proc(name:Name) { 
+	fmt.printfln("PrintHello: My name is: %s %s", name.first, name.last)
 }
 
 Name :: struct { 
@@ -31,5 +35,7 @@ main :: proc () {
 	last = "Part",
 	PrintName = PrintName,
 	}
+	name.PrintName(name)
+	name.PrintName = PrintHello
 	name.PrintName(name)
 }
