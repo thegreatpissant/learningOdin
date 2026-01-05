@@ -234,7 +234,7 @@ UpdateLevelLost :: proc(app:^sup.App, deltaTime:f32) {
 	if sup.Ticked(&app.bombBurstTimer) { 
 		for i := len(app.bombs) - 1; i >= 0; i -=1 { 
 			if app.bombs[i].enabled && !app.bombs[i].blowingUp { 
-				sup.BlowUpBomb(&app.bombs[i])
+				sup.BlowUpBomb(app.bombs[i])
 				break
 			}
 		}

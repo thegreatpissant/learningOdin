@@ -60,8 +60,7 @@ Player :: struct {
 	lives: int,
 }
 
-BlowUpBomb:: proc(bomb:^^Bomb) { 
-	bomb := bomb^
+BlowUpBomb:: proc(bomb:^Bomb) { 
 	bomb.animation = bomb.blowUpAnimation
 	bomb.animation.deltaTime = 0
 	bomb.speed = 0
