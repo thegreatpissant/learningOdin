@@ -51,8 +51,7 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	app.fps.frameStartTicks = sdl.GetPerformanceCounter()
 	app.gameState = sup.GameState.START
 	app.level = 1
-	app.bombBurstTimer.tickDelay = 100000000
-	app.bursting = false
+	app.bombBurstTimer.tickDelay = .3 * sdl.NS_PER_SECOND
 	app.nextLevelTimer.tickDelay = 2 * sdl.NS_PER_SECOND
 	fmt.printfln("Initialize App - DONE")
 
@@ -65,73 +64,77 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	sdl.SetRenderLogicalPresentation(app.renderer, app.width, app.height, sdl.RendererLogicalPresentation.INTEGER_SCALE)
 	fmt.printfln("Initialize Window - DONE")
 
-	fmt.printfln("Loading Textures")
-	fmt.printfln("Loading Textures - DONE")
-
-	fmt.printfln("Initialize Audio")
-	fmt.printfln("Initialize Audio - DONE")
-
-	fmt.printfln("Initialize Actors")
-	assetScale :: 1.75
-
-	app.bomber = new(sup.Bomber)
-	if !sup.LoadTexture(app, "./assets/bomber/bomber.png", &app.bomber.texture) { 
+	fmt.printfln("== Loading Textures")
+	bomberTexture : ^sup.Texture
+	if !sup.LoadTexture(app, "./assets/bomber/bomber.png", &bomberTexture) { 
 		fmt.printfln("Failed to load bomber texture: %s", sdl.GetError())
 	}
-	app.bomber.width = (f32(app.bomber.texture.frameWidth) / 4) / assetScale
-	app.bomber.height = (f32(app.bomber.texture.height) / 4) / assetScale
-	app.bomber.speed = app.bomber.width
-	sup.StartTimer(&app.bomber.spawnTimer)
-	app.bomber.position.y = app.bomber.height 
-	//  Bomb spawn point
-	app.bomber.spawnPoint.x = app.bomber.width / 2
-	app.bomber.spawnPoint.y = app.bomber.height
-
-	bombTexture :^sup.Texture 
-	if !sup.LoadTexture(app, "./assets/bomber/bomb.png", &bombTexture, 1) { 
+	bombIdleTexture :^sup.Texture 
+	if !sup.LoadTexture(app, "./assets/bomber/bomb.png", &bombIdleTexture, 1) { 
 		fmt.printfln("Failed to load bomb texture: %s", sdl.GetError())
 	}
 	bombBlowUpTexture:^sup.Texture
 	if !sup.LoadTexture(app, "./assets/bomber/bomb-sheet.png", &bombBlowUpTexture, 4) { 
 		fmt.printfln("Failed to load bomb texture: %s", sdl.GetError())
 	}
-	for i in 0..<len(app.bombs) { 
-		bomb :^sup.Bomb= new(sup.Bomb)
-		app.bombs[i] = bomb
-		bomb.texture = bombTexture
-		bomb.blowUpTexture = bombBlowUpTexture
-		bomb.enabled = false
-		bomb.width = (f32(bomb.texture.frameWidth) / 5 ) / assetScale
-		bomb.height = (f32(bomb.texture.height) / 5 ) / assetScale
-		bomb.collider.rect.w = bomb.width
-		bomb.collider.rect.h = bomb.height
-		bomb.animation.texture = bomb.texture
-	}
 
-	app.buckets = new(sup.Buckets)
-	app.buckets.position.y = f32(app.height) / 2
 	bucketTexture : ^sup.Texture
 	if !sup.LoadTexture(app, "./assets/bomber/bucket.png", &bucketTexture) { 
 		fmt.printfln("Failed to load bucket texture: %s", sdl.GetError())
 	}
+	fmt.printfln("== Loading Textures - DONE")
+
+	fmt.printfln("== Initialize Audio")
+	fmt.printfln("== Initialize Audio - DONE")
+
+	fmt.printfln("== Initialize Actors")
+	assetScale :: 1.75
+
+	//  Bomber
+	app.bomber = new(sup.Bomber)
+	app.bomber.texture = bomberTexture
+	app.bomber.width = (f32(app.bomber.texture.frameWidth) / 4) / assetScale
+	app.bomber.height = (f32(app.bomber.texture.height) / 4) / assetScale
+	app.bomber.speed = app.bomber.width
+	sup.StartTimer(&app.bomber.spawnTimer)
+	app.bomber.position.y = app.bomber.height 
+	//  Bomber's Bomb spawn point
+	app.bomber.spawnPoint.x = app.bomber.width / 2
+	app.bomber.spawnPoint.y = app.bomber.height
+	//  Bombs
+	for i in 0..<len(app.bombs) { 
+		bomb :^sup.Bomb= new(sup.Bomb)
+		app.bombs[i] = bomb
+		bomb.enabled = false
+		bomb.idleAnimation = new(sup.Animation)
+		bomb.idleAnimation.texture = bombIdleTexture
+		bomb.blowUpAnimation = new(sup.Animation)
+		bomb.blowUpAnimation.texture = bombBlowUpTexture
+		bomb.width = (f32(bomb.idleAnimation.texture.frameWidth) / 5 ) / assetScale
+		bomb.height = (f32(bomb.idleAnimation.texture.height) / 5 ) / assetScale
+	}
+	//  Buckets
+	app.buckets = new(sup.Buckets)
+	app.buckets.position.y = f32(app.height) / 2
 	for i in 0..<len(app.buckets.buckets) { 
 		bucket := new(sup.Bucket)
 		bucket.texture = bucketTexture
 		bucket.height = (f32(bucket.texture.height) / 5 ) / assetScale * .7
 		bucket.position.x = 0
-		bucket.position.y = app.buckets.position.y + f32(i) * bucket.height  + f32(i) * bucket.height * .7
+		bucket.position.y = app.buckets.position.y + f32(i) * bucket.height + f32(i) * bucket.height * .7
 		bucket.collider.rect.x = bucket.position.x
 		bucket.collider.rect.y = bucket.position.y
 		bucket.collider.rect.h = bucket.height / 5
 		app.buckets.buckets[i] =  bucket
 	}
+	//  Player
 	app.player = new(sup.Player)
-	InitPlayer(app)
-
+	//  Ground
 	app.groundCollider = new(sup.BoxCollider)
 	app.groundCollider.rect = { 0, f32(app.height) - 50, f32(app.width), f32(app.height)}
 	fmt.printfln("Initialize Actors - DONE")
 
+	InitPlayer(app)
 	InitBomber(app)
 
 	return sdl.AppResult.CONTINUE
@@ -158,9 +161,9 @@ InitBomber :: proc(app:^sup.App) {
 	app.bomber.speed = bomberSpeed
 	for bomb in app.bombs { 
 		bomb.enabled = false
-		bomb.animation.texture = bomb.texture
-		bomb.speed = bombSpeed
 		bomb.blowingUp = false
+		bomb.animation = bomb.idleAnimation
+		bomb.speed = bombSpeed
 	}
 	app.bomber.nextBomb = len(app.bombs)
 	app.buckets.position.x = f32(app.width) / 2
@@ -216,32 +219,42 @@ RenderStartScreen :: proc(app:^sup.App) {
 	sup.RenderText(app, app.fpsText, &textPosition)
 }
 
-PlayBombBursts :: proc(app:^sup.App, deltaTime:f32) { 
-	//  iterate through thte bombs and blow them up
-	if app.bursting && sup.Ticked(&app.bombBurstTimer) { 
+UpdateLevelLost :: proc(app:^sup.App, deltaTime:f32) { 
+	//  iterate through the bombs and blow them up
+	if sup.Ticked(&app.bombBurstTimer) { 
 		for i := len(app.bombs) - 1; i >= 0; i -=1 { 
-			fmt.printfln("bomb #%v",app.bombs[i])
 			if app.bombs[i].enabled && !app.bombs[i].blowingUp { 
-				fmt.printfln("bursting bomb #%d",i)
-				sup.BlowUpBomb(app.bombs[i])
-			fmt.printfln("bomb #%v",app.bombs[i])
-				return
+				sup.BlowUpBomb(&app.bombs[i])
+				break
 			}
 		}
-		app.bursting = false
-		fmt.printfln("Done bursting")
 	} 
+	//  Iterate bomb state
+	for bomb in app.bombs { 
+		if bomb.blowingUp { 
+			if sup.Ticked(&bomb.blowUpTimer) && bomb.blowUpCountdown > 0 { 
+				bomb.blowUpCountdown -= 1
+			} else { 
+				bomb.blowingUp = false
+				bomb.enabled = false
+			}
+		} 
+	}
 
-	if sup.Ticked(&app.bombBurstTimer) { 
-		fmt.printfln("Burst Ticked")
-		// After last bomb blows up
-		sup.StopTimer(&app.bombBurstTimer)
-		if app.player.lives < 0 { 
-			app.gameState = sup.GameState.END
-		} else { 
-			InitBomber(app)
-			app.gameState = sup.GameState.START
+	//  Are all the bombs blown up?
+	for bomb in app.bombs { 
+		if bomb.enabled { 
+			return
 		}
+	}
+
+	// After last bomb blows up
+	sup.StopTimer(&app.bombBurstTimer)
+	if app.player.lives < 0 { 
+		app.gameState = sup.GameState.END
+	} else { 
+		InitBomber(app)
+		app.gameState = sup.GameState.START
 	}
 }
 
@@ -268,9 +281,12 @@ UpdateGamePlay :: proc(app:^sup.App, deltaTime:f32) {
 		}	
 		if sup.Collides(&bomb.collider.rect, &app.groundCollider.rect) { 
 			app.gameState = sup.GameState.LOSELEVEL
-			app.bursting = true
 			sup.StartTimer(&app.bombBurstTimer)
+			app.bombBurstTimer.startTicks = 0
 			app.player.lives -= 1
+			for bomb in app.bombs{ 
+				bomb.speed = 0
+			}
 			return
 		}
 
@@ -313,9 +329,10 @@ RenderGamePlay :: proc(app:^sup.App){
 	// RenderBombs
 	for bomb in app.bombs { 
 		if bomb.enabled { 
+			sup.UpdateAnimation(bomb.animation, app.fps.delta)
 			sup.RenderTexture(
-				bomb.texture,
-				sup.GetSrcRectForAnimation(&bomb.animation),
+				bomb.animation.texture,
+				sup.GetSrcRectForAnimation(bomb.animation),
 				sdl.FRect{bomb.position.x, bomb.position.y, bomb.width, bomb.height},
 				app,
 				0, sdl.FPoint{ 0, 0}
@@ -371,7 +388,7 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	case sup.GameState.RUN:
 		UpdateGamePlay(app, deltaTime)
 	case sup.GameState.LOSELEVEL:
-		PlayBombBursts(app, deltaTime)
+		UpdateLevelLost(app, deltaTime)
 	case sup.GameState.NEXTLEVEL:
 		UpdateNextLevel(app, deltaTime)
 	}

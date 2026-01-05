@@ -37,7 +37,6 @@ App :: struct {
 	groundCollider: ^BoxCollider,
 	gameState: GameState,
 	bombBurstTimer: Timer,
-	bursting : bool,
 	nextLevelTimer: Timer,
+	bursting : bool,
 }
-

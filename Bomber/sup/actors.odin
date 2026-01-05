@@ -1,7 +1,7 @@
 package sup
 
 import "core:fmt"
-import "vendor:sdl3"
+import sdl "vendor:sdl3"
 
 Bomber :: struct { 
 	texture : ^Texture,
@@ -32,7 +32,10 @@ Bucket :: struct {
 	enabled: bool
 }
 
-Bombs :: [15]^Bomb
+BOMBCOUNT :: 15
+BOMBBLOWUPCOUNTDOWN :: 1
+BOMBBLOWUPDELAY :: .1 * sdl.NS_PER_SECOND
+Bombs :: [BOMBCOUNT]^Bomb
 
 Bomb :: struct { 
 	render : bool,
@@ -43,10 +46,13 @@ Bomb :: struct {
 	width: f32,
 	height: f32,
 	speed :f32,
-	texture: ^Texture,
 	collider: BoxCollider,
-	animation: Animation,
+	animation: ^Animation,
+	idleAnimation: ^Animation,
 	blowUpTexture: ^Texture,
+	blowUpAnimation: ^Animation,
+	blowUpTimer: Timer,
+	blowUpCountdown: int
 }
 
 Player :: struct { 
@@ -54,25 +60,31 @@ Player :: struct {
 	lives: int,
 }
 
-BlowUpBomb :: proc(bomb:^Bomb) { 
-	bomb.animation.texture = bomb.blowUpTexture
+BlowUpBomb:: proc(bomb:^^Bomb) { 
+	bomb := bomb^
+	bomb.animation = bomb.blowUpAnimation
 	bomb.animation.deltaTime = 0
-	bomb.blowingUp = true
 	bomb.speed = 0
+	bomb.blowingUp = true
+	bomb.blowUpTimer.tickDelay = BOMBBLOWUPDELAY
+	bomb.blowUpCountdown = BOMBBLOWUPCOUNTDOWN
+	StartTimer(&bomb.blowUpTimer)
 }
+
 SpawnBomb :: proc(bombs:Bombs, bombI:int, position: Position) { 
 	bombs[bombI].position.x  = position.x - bombs[bombI].width / 2
 	bombs[bombI].position.y = position.y 
-	bombs[bombI].collider.rect.x = bombs[bombI].position.x
-	bombs[bombI].collider.rect.y = bombs[bombI].position.y
 	bombs[bombI].enabled = true
 }
+
 UpdateBombs :: proc(bombs:Bombs, deltatime: f32) {
 	for bomb in bombs { 
 		if bomb.enabled { 
-			UpdateAnimation(&bomb.animation, u64(deltatime))
 			bomb.position.y += deltatime * bomb.speed
+			bomb.collider.rect.x = bomb.position.x
 			bomb.collider.rect.y = bomb.position.y
+			bomb.collider.rect.w = bomb.width
+			bomb.collider.rect.h = bomb.height
 		}
 	}
 }
