@@ -8,6 +8,7 @@ Position :: sdl.FPoint
 
 
 GameState :: enum { 
+	RETRYSTART,
 	START,
 	RUN,
 	PAUSE,

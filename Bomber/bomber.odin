@@ -209,6 +209,16 @@ RenderPauseScreen :: proc(app:^sup.App) {
 	sup.RenderText(app, app.fpsText, &textPosition)
 }
 
+RenderRetryScreen :: proc(app:^sup.App) { 
+	buf: [256]u8
+	app.fpsText.text = fmt.bprintf(buf[:], "Press any key to Retry")
+	sup.UpdateText(app.renderer, app.fpsText)
+	textPosition : sup.Position
+	textPosition.x = f32(app.width / 2 - app.fpsText.texture.texture.w / 2)
+	textPosition.y =  f32(app.height / 2)
+	sup.RenderText(app, app.fpsText, &textPosition)
+}
+
 RenderStartScreen :: proc(app:^sup.App) { 
 	buf: [256]u8
 	app.fpsText.text = fmt.bprintf(buf[:], "Press any key to start")
@@ -232,9 +242,7 @@ UpdateLevelLost :: proc(app:^sup.App, deltaTime:f32) {
 	//  Iterate bomb state
 	for bomb in app.bombs { 
 		if bomb.blowingUp { 
-			if sup.Ticked(&bomb.blowUpTimer) && bomb.blowUpCountdown > 0 { 
-				bomb.blowUpCountdown -= 1
-			} else { 
+			if sup.Ticked(&bomb.blowUpTimer) { 
 				bomb.blowingUp = false
 				bomb.enabled = false
 			}
@@ -254,7 +262,7 @@ UpdateLevelLost :: proc(app:^sup.App, deltaTime:f32) {
 		app.gameState = sup.GameState.END
 	} else { 
 		InitBomber(app)
-		app.gameState = sup.GameState.START
+		app.gameState = sup.GameState.RETRYSTART
 	}
 }
 
@@ -409,6 +417,8 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 		RenderLevelSuccess(app)
 	case sup.GameState.START:
 		RenderStartScreen(app)
+	case sup.GameState.RETRYSTART:
+		RenderRetryScreen(app)
 	case sup.GameState.PAUSE:
 		RenderPauseScreen(app)
 	case sup.GameState.END:
@@ -448,6 +458,8 @@ AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 		fallthrough
 	case sup.GameState.NEXTLEVEL:
 		return GamePlayEvent(app, event)
+	case sup.GameState.RETRYSTART:
+		fallthrough
 	case sup.GameState.START:
 		return StartEvent(app, event)
 	case sup.GameState.PAUSE:
