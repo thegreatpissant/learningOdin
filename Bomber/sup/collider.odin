@@ -7,9 +7,6 @@ BoxCollider :: struct {
 }
 
 Collides :: proc(lBox:^sdl.FRect, rBox:^sdl.FRect) -> bool { 
-	// EWWWWWWWW
-	return sdl.HasRectIntersection(sdl.Rect{ x=i32(lBox.x), y=i32(lBox.y), w=i32(lBox.w), h=i32(lBox.h)}, sdl.Rect{ x=i32(rBox.x), y=i32(rBox.y), w=i32(rBox.w), h=i32(rBox.h)})
-	/** 
 	lMinX := lBox.x
 	lMaxX := lBox.x + lBox.w
 	lMinY := lBox.y
@@ -29,12 +26,11 @@ Collides :: proc(lBox:^sdl.FRect, rBox:^sdl.FRect) -> bool {
 	if lMinY >= rMaxY { 
 		return false
 	}
-	if lMaxY <= rMinX { 
+	if lMaxY <= rMinY { 
 		return false
 	}
 
 	return true
-	*/
 }
 
 RenderBoxCollider :: proc(app: ^App, collider:^BoxCollider, color:sdl.Color)
