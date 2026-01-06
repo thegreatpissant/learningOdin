@@ -151,26 +151,53 @@ InitPlayer :: proc(app:^sup.App) {
 }
 
 InitBomber :: proc(app:^sup.App) { 
-	assetScale :f32= 1.75
+	assetScale :f32= 1 / 1.75
 
 	// Level specific
-	bucketWidth : f32 = (f32(app.buckets.buckets[0].texture.frameWidth) / 5 ) / assetScale
-	bombSpeed :f32 = f32(app.bombs[0].height) * 2 * f32(app.level)
-	bomberSpeed :f32 = app.bomber.width * 2 * f32(app.level)
-	bomberSpawnTimer :u64 = 700000000 
-
+	bucketWidth : f32 
+	bombSpeed :f32 
+	bomberSpeed :f32
+	bomberSpawnTimer :u64
+	bombCount :int
+	switch app.level { 
+	case 1:
+		bucketWidth = (f32(app.buckets.buckets[0].texture.frameWidth) / 3 ) * assetScale
+		bombSpeed = f32(app.bombs[0].height) * 2 * f32(app.level)
+		bomberSpeed = app.bomber.width * 2 * f32(app.level)
+		bombCount = 15
+		bomberSpawnTimer = 700000000 
+	case 2:
+		bucketWidth = (f32(app.buckets.buckets[0].texture.frameWidth) / 3 ) * assetScale
+		bombSpeed = f32(app.bombs[0].height) * 2 * f32(app.level)
+		bomberSpeed = app.bomber.width * 2 * f32(app.level)
+		bombCount = 15
+		bomberSpawnTimer = 500000000 
+	case 3:
+		bucketWidth = (f32(app.buckets.buckets[0].texture.frameWidth) / 3 ) * assetScale
+		bombSpeed = f32(app.bombs[0].height) * 2 * f32(app.level)
+		bomberSpeed = app.bomber.width * 2 * f32(app.level)
+		bombCount = 15
+		bomberSpawnTimer = 300000000
+	case:
+		bucketWidth = (f32(app.buckets.buckets[0].texture.frameWidth) / 3 ) * assetScale
+		bombSpeed = f32(app.bombs[0].height) * 2 * f32(app.level)
+		bomberSpeed = app.bomber.width * 2 * f32(app.level)
+		bombCount = 15
+		bomberSpawnTimer = 100000000
+	}
 	app.bomber.bombsCaught = 0
 	app.bomber.direction = 1
 	app.bomber.position.x = f32(app.width / 2)
 	app.bomber.spawnTimer.tickDelay = bomberSpawnTimer
 	app.bomber.speed = bomberSpeed
+	app.bomber.bombCount = bombCount
 	for bomb in app.bombs { 
 		bomb.enabled = false
 		bomb.blowingUp = false
 		bomb.animation = bomb.idleAnimation
 		bomb.speed = bombSpeed
 	}
-	app.bomber.nextBomb = len(app.bombs)
+	app.bomber.nextBomb = app.bomber.bombCount
 	app.buckets.position.x = f32(app.width) / 2
 	for bucket in app.buckets.buckets { 
 		bucket.width = bucketWidth
@@ -314,7 +341,7 @@ UpdateGamePlay :: proc(app:^sup.App, deltaTime:f32) {
 		}
 	}
 
-	if app.bomber.bombsCaught >= len(app.bombs) { 
+	if app.bomber.bombsCaught >= app.bomber.bombCount { 
 		app.gameState = sup.GameState.NEXTLEVEL
 		sup.StartTimer(&app.nextLevelTimer)
 	}	

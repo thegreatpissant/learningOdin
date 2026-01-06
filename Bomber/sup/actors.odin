@@ -6,7 +6,7 @@ import sdl "vendor:sdl3"
 Bomber :: struct { 
 	texture : ^Texture,
 	speed: f32,
-	bombcount: i32,
+	bombCount: int,
 	position: Position,
 	direction: f32,
 	width: f32,
@@ -32,10 +32,10 @@ Bucket :: struct {
 	enabled: bool
 }
 
-BOMBCOUNT :: 15
+MAXBOMBCOUNT :: 35
 BOMBBLOWUPCOUNTDOWN :: 4
 BOMBBLOWUPDELAY :: .5 * sdl.NS_PER_SECOND
-Bombs :: [BOMBCOUNT]^Bomb
+Bombs :: [MAXBOMBCOUNT]^Bomb
 
 Bomb :: struct { 
 	render : bool,
