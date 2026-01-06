@@ -60,6 +60,9 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 		fmt.printfln("Failed to create window and renderer %s", sdl.GetError())
 		return sdl.AppResult.FAILURE
 	}
+	if !sdl.SetWindowMouseGrab(app.window, true) { 
+		fmt.printfln("Failed to grab the mouse cursor: %s", sdl.GetError())
+	}
 	// sdl.SetRenderLogicalPresentation(app.renderer, app.width, app.height, sdl.RendererLogicalPresentation.LETTERBOX)
 	sdl.SetRenderLogicalPresentation(app.renderer, app.width, app.height, sdl.RendererLogicalPresentation.INTEGER_SCALE)
 	fmt.printfln("Initialize Window - DONE")
@@ -203,6 +206,7 @@ InitBomber :: proc(app:^sup.App) {
 		bucket.width = bucketWidth
 		bucket.enabled = true
 	}
+	initialMouse = true
 	sup.StartTimer(&app.bomber.spawnTimer)
 }
 
@@ -253,7 +257,7 @@ RenderRetryScreen :: proc(app:^sup.App) {
 
 RenderStartScreen :: proc(app:^sup.App) { 
 	buf: [256]u8
-	app.fpsText.text = fmt.bprintf(buf[:], "Press any key to start")
+	app.fpsText.text = fmt.bprintf(buf[:], "Click mouse to start")
 	sup.UpdateText(app.renderer, app.fpsText)
 	textPosition : sup.Position
 	textPosition.x = f32(app.width / 2 - app.fpsText.texture.texture.w / 2)
@@ -547,7 +551,7 @@ PauseEvent :: proc(app:^sup.App, event: ^sdl.Event) -> sdl.AppResult {
 
 StartEvent :: proc(app:^sup.App, event: ^sdl.Event) -> sdl.AppResult { 
 	#partial switch (event.type) {
-	case sdl.EventType.KEY_DOWN:
+	case sdl.EventType.MOUSE_BUTTON_DOWN:
 		app.gameState = sup.GameState.RUN
 	}
 	return sdl.AppResult.CONTINUE
