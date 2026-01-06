@@ -35,6 +35,7 @@ App :: struct {
 	level:  int,
 	bombs:  Bombs,
 	buckets: ^Buckets,
+	groundTexture: ^Texture,
 	groundCollider: ^BoxCollider,
 	gameState: GameState,
 	bombBurstTimer: Timer,

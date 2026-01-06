@@ -65,6 +65,10 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	fmt.printfln("Initialize Window - DONE")
 
 	fmt.printfln("== Loading Textures")
+	groundTexture : ^sup.Texture
+	if !sup.LoadTexture(app, "./assets/bomber/ground.png", &groundTexture) { 
+		fmt.printfln("Failed to load ground texture: %s", sdl.GetError())
+	}
 	bomberTexture : ^sup.Texture
 	if !sup.LoadTexture(app, "./assets/bomber/bomber.png", &bomberTexture) { 
 		fmt.printfln("Failed to load bomber texture: %s", sdl.GetError())
@@ -91,6 +95,7 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	assetScale :: 1.75
 
 	//  Bomber
+	app.groundTexture = groundTexture
 	app.bomber = new(sup.Bomber)
 	app.bomber.texture = bomberTexture
 	app.bomber.width = (f32(app.bomber.texture.frameWidth) / 4) / assetScale
@@ -131,7 +136,7 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 	app.player = new(sup.Player)
 	//  Ground
 	app.groundCollider = new(sup.BoxCollider)
-	app.groundCollider.rect = { 0, f32(app.height) - 50, f32(app.width), f32(app.height)}
+	app.groundCollider.rect = { 0, f32(app.height) - 50, f32(app.width), f32(50)}
 	fmt.printfln("Initialize Actors - DONE")
 
 	InitPlayer(app)
@@ -361,6 +366,15 @@ RenderGamePlay :: proc(app:^sup.App){
 		}
 	}
 
+	// Ground
+	sup.RenderTexture(
+		app.groundTexture,
+		sup.GetSrcRect(app.groundTexture),
+		app.groundCollider.rect,
+		app,
+		0, sdl.FPoint{ 0, 0}
+	)
+		
 	sdl.SetRenderDrawColor(app.renderer, 0xff, 0x00, 0x00, sdl.ALPHA_OPAQUE)
 	sdl.RenderRect(app.renderer, &app.groundCollider.rect)
 	for bomb in app.bombs { 
