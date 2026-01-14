@@ -9,7 +9,23 @@ App :: struct {
 	window: ^sdl.Window,
 	renderer: ^sdl.Renderer,
 	fps: FPS,
-	mainScene: Scene,
+	scene: ^Scene,
+	mainScene: ^Scene,
+	introScene: ^Scene,
+	player: Actor,
+}
+
+Actor :: struct { 
+	position: sdl.FPoint,
+	direction: Direction
+}
+
+Direction :: enum { 
+	NONE = 0,
+	UP = 1 << 0,
+	DOWN = 1 << 1,
+	LEFT = 1 << 2,
+	RIGHT = 1 << 3
 }
 
 Scene :: struct { 
