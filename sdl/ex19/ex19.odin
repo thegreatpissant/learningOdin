@@ -42,10 +42,31 @@ AppInit :: proc "c" (
 	app.introScene.appEvent = IntroSceneEvent
 	app.introScene.appIterate = IntroSceneIterate
 	app.scene = app.mainScene
+	app.mainScene.door = new(sup.DOOR)
+	app.mainScene.door.scene = app.mainScene
+	app.mainScene.door.position.x = 40
+	app.mainScene.door.position.y = 0
+	app.mainScene.door.width = 40
+	app.mainScene.door.height = 80
+	sup.UpdateDoor(app.mainScene.door)
+
+	app.introScene.door = new(sup.DOOR)
+	app.introScene.door.scene = app.introScene
+	app.introScene.door.position.x = 40
+	app.introScene.door.position.y = 200
+	app.introScene.door.width = 40
+	app.introScene.door.height = 80
+	sup.UpdateDoor(app.introScene.door)
+	app.introScene.door.destination = app.mainScene.door
+	app.mainScene.door.destination = app.introScene.door
+
 	app.window = new(sdl.Window)
 	app.renderer = new(sdl.Renderer)
-	app.player.position.x = 20
-	app.player.position.y = 20
+	app.player.character = sup.Character.PLAYER
+	app.player.position.x = f32(app.width / 2)
+	app.player.position.y = f32(app.height / 2)
+	app.player.width = 20
+	app.player.height = 20
 	app.player.direction = sup.Direction.NONE
 	sup.SetTargetFPS(&app.fps, 60)
 	app.fps.frameStartTicks = sdl.GetPerformanceCounter()
@@ -75,9 +96,6 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	sup.StartFrame(&app.fps)
 
 	// Render
-	sdl.SetRenderDrawColor(app.renderer, 0x00, 0x00, 0x00, sdl.ALPHA_OPAQUE)
-	sdl.RenderClear(app.renderer)
-
 	app.scene.appIterate(app)
 
 	sdl.RenderPresent(app.renderer)
@@ -92,56 +110,22 @@ AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 	return app.scene.appEvent(app, event)
 }
 
-MoveActor :: proc(actor: ^sup.Actor) {
-	Interval: f32 = 10
-	if actor.direction & sup.Direction.UP == sup.Direction.UP {
-		actor.position.y -= Interval
-	}
-	if actor.direction & sup.Direction.DOWN == sup.Direction.DOWN {
-		actor.position.y += Interval
-	}
-	if actor.direction & sup.Direction.LEFT == sup.Direction.LEFT {
-		actor.position.x -= Interval
-	}
-	if actor.direction & sup.Direction.RIGHT == sup.Direction.RIGHT {
-		actor.position.x += Interval
-	}
-}
-
-HandlePlayerEvent :: proc(event: ^sdl.Event, app: ^sup.App) {
-	keyStates := sdl.GetKeyboardState(nil)
-	#partial switch (event.type) {
-	case sdl.EventType.KEY_DOWN:
-		#partial switch (event.key.scancode) {
-		case sdl.Scancode.LEFT:
-			app.player.direction |= sup.Direction.LEFT
-		case sdl.Scancode.RIGHT:
-			app.player.direction |= sup.Direction.RIGHT
-		case sdl.Scancode.UP:
-			app.player.direction |= sup.Direction.UP
-		case sdl.Scancode.DOWN:
-			app.player.direction |= sup.Direction.DOWN
-		}
-	case sdl.EventType.KEY_UP:
-		#partial switch (event.key.scancode) {
-		case sdl.Scancode.LEFT:
-			app.player.direction &~= sup.Direction.LEFT
-		case sdl.Scancode.RIGHT:
-			app.player.direction &~= sup.Direction.RIGHT
-		case sdl.Scancode.UP:
-			app.player.direction &~= sup.Direction.UP
-		case sdl.Scancode.DOWN:
-			app.player.direction &~= sup.Direction.DOWN
-		}
+CheckDoor :: proc(app: ^sup.App) { 
+	if sdl.HasRectIntersection(app.player.collider, app.scene.door.collider) { 
+		sup.DoorThePlayer(&app.player, app.scene.door)
+		app.scene = app.scene.door.destination.scene
 	}
 }
 
 MainSceneIterate :: proc(app: ^sup.App) -> sdl.AppResult {
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
-	MoveActor(&app.player)
-	sdl.SetRenderDrawColor(app.renderer, 0x00, 0xff, 0x00, 0x00)
-	fRect := sdl.FRect{app.player.position.x, app.player.position.y, 20, 20}
-	sdl.RenderRect(app.renderer, &fRect)
+	sup.UpdateActor(&app.player)
+	CheckDoor(app)
+
+	sdl.SetRenderDrawColor(app.renderer, 0x00, 0x00, 0x00, sdl.ALPHA_OPAQUE)
+	sdl.RenderClear(app.renderer)
+	sup.RenderPlayer(app.renderer, &app.player)
+	sup.RenderDoor(app.renderer, app.mainScene.door)
 	return sdl.AppResult.CONTINUE
 }
 
@@ -159,16 +143,18 @@ MainSceneEvent :: proc(app: ^sup.App, event: ^sdl.Event) -> sdl.AppResult {
 			app.scene = app.introScene
 		}
 	}
-	HandlePlayerEvent(event, app)
+	sup.HandlePlayerEvent(event, app)
 	return sdl.AppResult.CONTINUE
 }
 
 IntroSceneIterate :: proc(app: ^sup.App) -> sdl.AppResult {
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
-	MoveActor(&app.player)
-	sdl.SetRenderDrawColor(app.renderer, 0xff, 0x00, 0x00, 0x00)
-	fRect := sdl.FRect{app.player.position.x, app.player.position.y, 20, 20}
-	sdl.RenderRect(app.renderer, &fRect)
+	sup.UpdateActor(&app.player)
+	CheckDoor(app)
+	sdl.SetRenderDrawColor(app.renderer, 0x22, 0x22, 0x22, sdl.ALPHA_OPAQUE)
+	sdl.RenderClear(app.renderer)
+	sup.RenderPlayer(app.renderer, &app.player)
+	sup.RenderDoor(app.renderer, app.introScene.door)
 	return sdl.AppResult.CONTINUE
 }
 
@@ -186,7 +172,7 @@ IntroSceneEvent :: proc(app: ^sup.App, event: ^sdl.Event) -> sdl.AppResult {
 			app.scene = app.mainScene
 		}
 	}
-	HandlePlayerEvent(event, app)
+	sup.HandlePlayerEvent(event, app)
 	return sdl.AppResult.CONTINUE
 }
 
