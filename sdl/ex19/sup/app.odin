@@ -44,7 +44,8 @@ DOOR :: struct {
 	collider: sdl.Rect,
 	scene: ^Scene,
 	width: f32,
-	height: f32
+	height: f32,
+	color: sdl.Color
 }
 
 Scene :: struct { 
@@ -68,10 +69,6 @@ DoorThePlayer :: proc (player: ^Actor, door: ^DOOR){
 	}
 }
 
-TeleportPlayer :: proc (player: ^Actor, destination: sdl.FPoint) { 
-	player.position = destination
-}
-
 UpdateDoor :: proc(door:^DOOR){ 
 	door.collider.h = i32(door.height)
 	door.collider.w = i32(door.width)
@@ -80,7 +77,7 @@ UpdateDoor :: proc(door:^DOOR){
 }
 
 RenderDoor :: proc(renderer:^sdl.Renderer,door:^DOOR) {
-	sdl.SetRenderDrawColor(renderer, 0x00, 0xff, 0x00, 0x00)
+	sdl.SetRenderDrawColor(renderer, door.color.r, door.color.g, door.color.b, door.color.a)
 	fRect := sdl.FRect{door.position.x, door.position.y, 
 		door.width, door.height}
 	sdl.RenderFillRect(renderer, &fRect)

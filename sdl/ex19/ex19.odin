@@ -44,18 +44,20 @@ AppInit :: proc "c" (
 	app.scene = app.mainScene
 	app.mainScene.door = new(sup.DOOR)
 	app.mainScene.door.scene = app.mainScene
-	app.mainScene.door.position.x = 40
-	app.mainScene.door.position.y = 0
 	app.mainScene.door.width = 40
 	app.mainScene.door.height = 80
+	app.mainScene.door.position.x = f32(app.width) * .5 - app.mainScene.door.width * .5
+	app.mainScene.door.position.y = f32(app.height) - app.mainScene.door.height * 2
+	app.mainScene.door.color = sdl.Color{ 0xff, 0x00, 0x00, 0xff }
 	sup.UpdateDoor(app.mainScene.door)
 
 	app.introScene.door = new(sup.DOOR)
 	app.introScene.door.scene = app.introScene
-	app.introScene.door.position.x = 40
-	app.introScene.door.position.y = 200
 	app.introScene.door.width = 40
 	app.introScene.door.height = 80
+	app.introScene.door.position.x = f32(app.width) * .5 - app.introScene.door.width * .5
+	app.introScene.door.position.y = 0
+	app.introScene.door.color = sdl.Color{ 0x00, 0xff, 0x00, 0xff }
 	sup.UpdateDoor(app.introScene.door)
 	app.introScene.door.destination = app.mainScene.door
 	app.mainScene.door.destination = app.introScene.door
