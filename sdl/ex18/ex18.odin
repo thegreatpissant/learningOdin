@@ -40,6 +40,16 @@ AppInit :: proc "c" (
 	app.mainScene.appIterate = MainSceneIterate
 	app.mainScene.width = 2000
 	app.mainScene.height = 750
+	borderWidth :f32= 10
+	app.mainScene.borderRect = sdl.FRect{ 0 + borderWidth, 0 + borderWidth, app.mainScene.width - 2*borderWidth, app.mainScene.height - 2*borderWidth}
+	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + 40, app.mainScene.borderRect.y + 40, 20, 20 })
+	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80, app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80, 20, 20 })
+	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + 120, app.mainScene.borderRect.y + 40, 20, 20 })
+	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80, app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80, 20, 20 })
+	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + 400, app.mainScene.borderRect.y + 40, 20, 20 })
+	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80, app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80, 20, 20 })
+	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + 1200, app.mainScene.borderRect.y + 40, 20, 20 })
+	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80, app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80, 20, 20 })
 	app.scene = app.mainScene
 
 	app.window = new(sdl.Window)
@@ -95,10 +105,17 @@ AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 MainSceneIterate :: proc(app: ^sup.App) -> sdl.AppResult {
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
 	sup.UpdateActor(&app.player)
-
+	sup.HandleActorInGame(&app.player, &app.scene.borderRect)
+	sup.UpdateCamera(app)
+	
 	sdl.SetRenderDrawColor(app.renderer, 0x00, 0x00, 0x00, sdl.ALPHA_OPAQUE)
 	sdl.RenderClear(app.renderer)
-	sup.RenderPlayer(app.renderer, &app.player)
+	sdl.SetRenderDrawColor(app.renderer, 0xff, 0x00, 0x00, sdl.ALPHA_OPAQUE)
+	sup.RenderBorderRect(app.renderer, &app.camera, &app.scene.borderRect)
+	for &rect in app.scene.markers { 
+		sup.RenderBorderRect(app.renderer, &app.camera, &rect)
+	}
+	sup.RenderPlayer(app.renderer, &app.camera, &app.player)
 	return sdl.AppResult.CONTINUE
 }
 
