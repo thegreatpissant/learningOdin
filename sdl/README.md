@@ -16,5 +16,6 @@
 | Animation                | ex14    |
 | Effects and Music        | ex15    |
 | Collision Detection      | ex16    |
+| Text Input               | ex17    |
 | Scrolling Camera         | ex18    |
 | State Machines           | ex19    |
