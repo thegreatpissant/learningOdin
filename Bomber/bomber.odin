@@ -12,6 +12,7 @@ track: mem.Tracking_Allocator
 
 AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppResult {
 	context = runtime.default_context()
+	context.allocator = mem.tracking_allocator(&track)
 
 	fmt.printfln("Initialize SDL")
 	if !sdl.Init({.VIDEO , .AUDIO}) {
@@ -32,6 +33,8 @@ AppInit :: proc "c" (appState: ^rawptr, argc: i32, argv: [^]cstring) -> sdl.AppR
 
 	fmt.printfln("Initialize App")
 	app := new(sup.App)
+	app.allocator = context.allocator
+	app.track = &track
 	appState^ = app
 	app.title = "ex16"
 	app.width = 640
@@ -421,10 +424,11 @@ RenderGamePlay :: proc(app:^sup.App){
 BISCOTTI :: sdl.Color{ 0xe3, 0xc5, 0x65, 0xff }
 
 AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
-	context = runtime.default_context()
+	app := (^sup.App)(app)
+	context = app._context
+	context.allocator = app.allocator
 	// --> INPUT
 	// Init
-	app := (^sup.App)(app)
 	sup.StartFrame(&app.fps)
 	// Update objects
 	buf: [256]u8
@@ -478,8 +482,9 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 initialMouse := true
 
 AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
-	context = runtime.default_context()
 	app := (^sup.App)(app)
+	context = app._context
+	context.allocator = app.allocator
 	offset :: 10
 	// Global quit handle
    	#partial switch (event.type) {
@@ -582,23 +587,42 @@ GamePlayEvent :: proc(app:^sup.App, event: ^sdl.Event) -> sdl.AppResult {
 
 AppQuit :: proc "c" (app: rawptr, result: sdl.AppResult) {
 	app := (^sup.App)(app)
-	context = runtime.default_context()
+	context = app._context
+	context.allocator = app.allocator
+	free(app.bomber.texture)
+	free(app.bombs[0].blowUpTexture)
+	free(app.bombs[0].idleAnimation.texture)
+	free(app.buckets.buckets[0].texture)
+	free(app.groundTexture)
+	free(app.fpsText.texture)
+	free(app.playerScoreText.texture)
+	free(app.bomber)
+	for i in 0..<len(app.bombs) { 
+		free(app.bombs[i].blowUpAnimation)
+		free(app.bombs[i].idleAnimation)
+		free(app.bombs[i])
+	}
+	for i in 0..<len(app.buckets.buckets) { 
+		free(app.buckets.buckets[i])
+	}
+	free(app.buckets)
+	free(app.player)
+	free(app.groundCollider)
+	free(app.fpsText)
+	free(app.playerScoreText)
 	free(app)
 	sdl_ttf.Quit()
 	sdl.Quit()
 }
 
 main :: proc() {
-	context = runtime.default_context()
 	mem.tracking_allocator_init(&track, context.allocator)
-	defer mem.tracking_allocator_destroy(&track)
 	context.allocator = mem.tracking_allocator(&track)
-	renderer := new(sdl.Renderer)
-	renderer = nil
 	argv: cstring = ""
 	returnCode := sdl.EnterAppMainCallbacks(0, &argv, AppInit, AppIterate, AppEvent, AppQuit)
 	fmt.printfln("App returned : %v", returnCode)
 	for _, leak in track.allocation_map {
-		fmt.println("%v leaked %m", leak.location, leak.size)
+		fmt.printfln("%v leaked %m", leak.location, leak.size)
 	}
+	mem.tracking_allocator_destroy(&track)
 }

@@ -1,5 +1,6 @@
 package sup
 
+import "core:mem"
 import "base:runtime"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
@@ -19,6 +20,8 @@ GameState :: enum {
 }
 
 App :: struct {
+	allocator: runtime.Allocator,
+	track: ^mem.Tracking_Allocator,
 	_context: runtime.Context,
 	timer:    Timer,
 	title:    cstring,
