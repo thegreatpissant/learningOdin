@@ -2,12 +2,10 @@ package ex19
 
 import "base:runtime"
 import "core:fmt"
-import "core:mem"
 import sup "sup"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
 
-track: mem.Tracking_Allocator
 AppInit :: proc "c" (
 	appState: ^rawptr,
 	argc: i32,
@@ -187,10 +185,6 @@ AppQuit :: proc "c" (app: rawptr, result: sdl.AppResult) {
 }
 
 main :: proc() {
-	context = runtime.default_context()
-	mem.tracking_allocator_init(&track, context.allocator)
-	defer mem.tracking_allocator_destroy(&track)
-	context.allocator = mem.tracking_allocator(&track)
 	renderer := new(sdl.Renderer)
 	renderer = nil
 	argv: cstring = ""
@@ -203,7 +197,4 @@ main :: proc() {
 		AppQuit,
 	)
 	fmt.printfln("App returned : %v", returnCode)
-	for _, leak in track.allocation_map {
-		fmt.println("%v leaked %m", leak.location, leak.size)
-	}
 }
