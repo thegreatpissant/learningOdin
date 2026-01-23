@@ -1,4 +1,4 @@
-| Tutorial                 | Example |
+| Lazyfoo Tutorial         | Example |
 |--------------------------|---------|
 | Hello SDL3               | ex1     |
 | Textures                 | ex2     |
@@ -19,3 +19,7 @@
 | Text Input               | ex17    |
 | Scrolling Camera         | ex18    |
 | State Machines           | ex19    |
+
+These are mostly to the spirit of the original exercise.  Some more so than others.  
+some need assets and the paths are based off the root of the repo  
+example run, from the repo root, `odin run ./sdl/ex14/ex14.odin -file`
