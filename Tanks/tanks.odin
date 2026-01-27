@@ -40,16 +40,85 @@ AppInit :: proc "c" (
 	app.mainScene.appIterate = MainSceneIterate
 	app.mainScene.width = 2000
 	app.mainScene.height = 750
-	borderWidth :f32= 10
-	app.mainScene.borderRect = sdl.FRect{ 1 + borderWidth, 0 + borderWidth, app.mainScene.width - 2*borderWidth, app.mainScene.height - 2*borderWidth}
-	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + 40, app.mainScene.borderRect.y + 40, 20, 20 })
-	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80, app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80, 20, 20 })
-	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + 120, app.mainScene.borderRect.y + 40, 20, 20 })
-	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80, app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80, 20, 20 })
-	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + 400, app.mainScene.borderRect.y + 40, 20, 20 })
-	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80, app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80, 20, 20 })
-	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + 1200, app.mainScene.borderRect.y + 40, 20, 20 })
-	append(&app.mainScene.markers, sdl.FRect{ app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80, app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80, 20, 20 })
+	borderWidth: f32 = 10
+	app.mainScene.borderRect = sdl.FRect {
+		1 + borderWidth,
+		0 + borderWidth,
+		app.mainScene.width - 2 * borderWidth,
+		app.mainScene.height - 2 * borderWidth,
+	}
+	append(
+		&app.mainScene.markers,
+		sdl.FRect {
+			app.mainScene.borderRect.x + 40,
+			app.mainScene.borderRect.y + 40,
+			20,
+			20,
+		},
+	)
+	append(
+		&app.mainScene.markers,
+		sdl.FRect {
+			app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80,
+			app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80,
+			20,
+			20,
+		},
+	)
+	append(
+		&app.mainScene.markers,
+		sdl.FRect {
+			app.mainScene.borderRect.x + 120,
+			app.mainScene.borderRect.y + 40,
+			20,
+			20,
+		},
+	)
+	append(
+		&app.mainScene.markers,
+		sdl.FRect {
+			app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80,
+			app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80,
+			20,
+			20,
+		},
+	)
+	append(
+		&app.mainScene.markers,
+		sdl.FRect {
+			app.mainScene.borderRect.x + 400,
+			app.mainScene.borderRect.y + 40,
+			20,
+			20,
+		},
+	)
+	append(
+		&app.mainScene.markers,
+		sdl.FRect {
+			app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80,
+			app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80,
+			20,
+			20,
+		},
+	)
+	append(
+		&app.mainScene.markers,
+		sdl.FRect {
+			app.mainScene.borderRect.x + 1200,
+			app.mainScene.borderRect.y + 40,
+			20,
+			20,
+		},
+	)
+	append(
+		&app.mainScene.markers,
+		sdl.FRect {
+			app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80,
+			app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80,
+			20,
+			20,
+		},
+	)
 	app.scene = app.mainScene
 
 	app.window = new(sdl.Window)
@@ -80,7 +149,8 @@ AppInit :: proc "c" (
 	fmt.printfln("Initialize Window - DONE")
 
 	fmt.printfln("Init Textures")
-	app.tankBodyTexture = sup.CreateTankTexture(app.renderer, app.scale)	
+	app.tankBodyTexture = sup.CreateTankTexture(app.renderer, app.scale)
+	app.tankTurretTexture = sup.CreateTurretTexture(app.renderer, app.scale)
 	fmt.printfln("Init Textures - DONE")
 
 	return sdl.AppResult.CONTINUE
@@ -112,19 +182,47 @@ MainSceneIterate :: proc(app: ^sup.App) -> sdl.AppResult {
 	sup.UpdateActor(&app.player)
 	sup.HandleActorInGame(&app.player, &app.mainScene.borderRect)
 	sup.UpdateCamera(app)
-	sdl.SetRenderTarget(app.renderer,nil)
-	sdl.SetRenderViewport(app.renderer, nil)
+	sdl.SetRenderTarget(app.renderer, nil)
 	sdl.SetRenderDrawColor(app.renderer, 0x00, 0x00, 0x00, sdl.ALPHA_OPAQUE)
 	sdl.RenderClear(app.renderer)
 	sdl.SetRenderDrawColor(app.renderer, 0xff, 0x00, 0x00, sdl.ALPHA_OPAQUE)
 	sup.RenderBorderRect(app.renderer, &app.camera, &app.mainScene.borderRect)
-	for &rect in app.mainScene.markers { 
+	for &rect in app.mainScene.markers {
 		sup.RenderBorderRect(app.renderer, &app.camera, &rect)
 	}
 	sup.RenderPlayer(app.renderer, &app.camera, &app.player)
-	tankTarget := sdl.FRect{ app.player.position.x - 6* 0.5 * app.scale, app.player.position.y - 4 * 0.5 * app.scale, 6 * app.scale, 4*app.scale}
-	tankPoint := sdl.FPoint{ tankTarget.w / 2, tankTarget.h / 2}
-	sdl.RenderTextureRotated(app.renderer, app.tankBodyTexture, nil, &tankTarget, app.player.rotation, nil, sdl.FlipMode.NONE)
+	tankTarget := sdl.FRect {
+		app.player.position.x - f32(app.tankBodyTexture.w) * 0.5 ,
+		app.player.position.y - f32(app.tankBodyTexture.h) * 0.5,
+		f32(app.tankBodyTexture.w),
+	    f32(app.tankBodyTexture.h)
+	}
+	tankRotationPoint := sdl.FPoint{tankTarget.w / 2, tankTarget.h / 2}
+	sdl.RenderTextureRotated(
+		app.renderer,
+		app.tankBodyTexture,
+		nil,
+		&tankTarget,
+		app.player.rotation,
+		nil, // &tankRotationPoint,
+		sdl.FlipMode.NONE,
+	)
+	turretTarget := sdl.FRect {
+		app.player.position.x - 1 * app.scale,
+		app.player.position.y - 1 * app.scale,
+		6 * app.scale,
+		2 * app.scale,
+	}
+	turretRotationPoint := sdl.FPoint{1 * app.scale, 1 * app.scale}
+	sdl.RenderTextureRotated(
+		app.renderer,
+		app.tankTurretTexture,
+		nil,
+		&turretTarget,
+		app.player.rotation,
+		&turretRotationPoint,
+		sdl.FlipMode.NONE,
+	)
 
 	return sdl.AppResult.CONTINUE
 }

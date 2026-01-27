@@ -2,67 +2,71 @@ package sup
 
 import sdl "vendor:sdl3"
 
-App :: struct { 
-	title : cstring,
-	width : i32,
-	height : i32,
-	window: ^sdl.Window,
-	renderer: ^sdl.Renderer,
-	fps: FPS,
-	scene: ^Scene,
-	mainScene: ^Scene,
-	player: Actor,
-	camera: sdl.FRect,
-	scale: f32,
-	rotation: f32,
-	tankBodyTexture: ^sdl.Texture,
-	tankTurretTexture: sdl.Texture,
+App :: struct {
+	title:             cstring,
+	width:             i32,
+	height:            i32,
+	window:            ^sdl.Window,
+	renderer:          ^sdl.Renderer,
+	fps:               FPS,
+	scene:             ^Scene,
+	mainScene:         ^Scene,
+	player:            Actor,
+	camera:            sdl.FRect,
+	scale:             f32,
+	rotation:          f32,
+	tankBodyTexture:   ^sdl.Texture,
+	tankTurretTexture: ^sdl.Texture,
 }
 
-Actor :: struct { 
-	position: sdl.FPoint,
-	rotation: f64,
+Actor :: struct {
+	position:  sdl.FPoint,
+	rotation:  f64,
 	direction: Direction,
-	collider: sdl.Rect,
+	collider:  sdl.Rect,
 	character: Character,
-	width: f32,
-	height: f32
+	width:     f32,
+	height:    f32,
 }
 
-Direction :: enum { 
-	NONE = 0,
-	UP = 1 << 0,
-	DOWN = 1 << 1,
-	LEFT = 1 << 2,
-	RIGHT = 1 << 3
+Direction :: enum {
+	NONE  = 0,
+	UP    = 1 << 0,
+	DOWN  = 1 << 1,
+	LEFT  = 1 << 2,
+	RIGHT = 1 << 3,
 }
 
-Character :: enum { 
-	NONE = 0,
+Character :: enum {
+	NONE   = 0,
 	PLAYER = 1,
-	NPC = 2,
+	NPC    = 2,
 }
 
-DOOR :: struct { 
-	position: sdl.FPoint,
+DOOR :: struct {
+	position:    sdl.FPoint,
 	destination: ^DOOR,
-	collider: sdl.Rect,
-	scene: ^Scene,
-	width: f32,
-	height: f32,
-	color: sdl.Color
+	collider:    sdl.Rect,
+	scene:       ^Scene,
+	width:       f32,
+	height:      f32,
+	color:       sdl.Color,
 }
 
-Scene :: struct { 
+Scene :: struct {
 	borderRect: sdl.FRect,
-	markers: [dynamic]sdl.FRect,
-	width: f32,
-	height: f32,
-	appIterate : proc (app: ^App) -> sdl.AppResult,
-	appEvent : proc (app: ^App, event: ^sdl.Event) -> sdl.AppResult,
+	markers:    [dynamic]sdl.FRect,
+	width:      f32,
+	height:     f32,
+	appIterate: proc(app: ^App) -> sdl.AppResult,
+	appEvent:   proc(app: ^App, event: ^sdl.Event) -> sdl.AppResult,
 }
 
-RenderBorderRect :: proc(renderer:^sdl.Renderer, camera: ^sdl.FRect, border:^sdl.FRect) { 
+RenderBorderRect :: proc(
+	renderer: ^sdl.Renderer,
+	camera: ^sdl.FRect,
+	border: ^sdl.FRect,
+) {
 	sdl.SetRenderDrawColor(renderer, 0x00, 0xff, 0x00, 0x00)
 	fRect := sdl.FRect{border.x, border.y, border.w, border.h}
 	//  object position - camera position
@@ -71,10 +75,18 @@ RenderBorderRect :: proc(renderer:^sdl.Renderer, camera: ^sdl.FRect, border:^sdl
 	sdl.RenderRect(renderer, &fRect)
 }
 
-RenderPlayer :: proc(renderer:^sdl.Renderer, camera: ^sdl.FRect, player:^Actor) { 
+RenderPlayer :: proc(
+	renderer: ^sdl.Renderer,
+	camera: ^sdl.FRect,
+	player: ^Actor,
+) {
 	sdl.SetRenderDrawColor(renderer, 0x00, 0xff, 0x00, 0x00)
-	fRect := sdl.FRect{player.position.x, player.position.y, 
-		player.width, player.height}
+	fRect := sdl.FRect {
+		player.position.x,
+		player.position.y,
+		player.width,
+		player.height,
+	}
 	//  object position - camera position
 	fRect.x -= camera.x
 	fRect.y -= camera.y
@@ -87,16 +99,16 @@ UpdateCamera :: proc(app: ^App) {
 	app.camera.y = app.player.position.y - .5 * f32(app.height)
 	app.camera.w = f32(app.width)
 	app.camera.h = f32(app.height)
-	if app.camera.x < 0 { 
+	if app.camera.x < 0 {
 		app.camera.x = 0
 	}
-	if app.camera.x + app.camera.w > app.scene.width { 
+	if app.camera.x + app.camera.w > app.scene.width {
 		app.camera.x = app.scene.width - app.camera.w
 	}
-	if app.camera.y < 0 { 
+	if app.camera.y < 0 {
 		app.camera.y = 0
 	}
-	if app.camera.y + app.camera.h > app.scene.height { 
+	if app.camera.y + app.camera.h > app.scene.height {
 		app.camera.y = app.scene.height - app.camera.h
 	}
 }
@@ -122,17 +134,17 @@ UpdateActor :: proc(actor: ^Actor) {
 	actor.collider.y = i32(actor.position.y)
 }
 
-HandleActorInGame :: proc(actor:^Actor, collider:^sdl.FRect){ 
-	if actor.position.x < collider.x { 
+HandleActorInGame :: proc(actor: ^Actor, collider: ^sdl.FRect) {
+	if actor.position.x < collider.x {
 		actor.position.x = collider.x
 	}
-	if actor.position.x + actor.height > collider.x + collider.w { 
+	if actor.position.x + actor.height > collider.x + collider.w {
 		actor.position.x = collider.x + collider.w - actor.width
 	}
-	if actor.position.y < collider.y { 
+	if actor.position.y < collider.y {
 		actor.position.y = collider.y
 	}
-	if actor.position.y + actor.height > collider.y + collider.h { 
+	if actor.position.y + actor.height > collider.y + collider.h {
 		actor.position.y = collider.y + collider.h - actor.height
 	}
 }
@@ -180,4 +192,3 @@ HandlePlayerEvent :: proc(event: ^sdl.Event, app: ^App) {
 		}
 	}
 }
-
