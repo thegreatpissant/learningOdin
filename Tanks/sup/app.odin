@@ -14,19 +14,28 @@ App :: struct {
 	player:            Actor,
 	camera:            sdl.FRect,
 	scale:             f32,
-	rotation:          f32,
 	tankBodyTexture:   ^sdl.Texture,
 	tankTurretTexture: ^sdl.Texture,
 }
 
-Actor :: struct {
+Transform:: struct { 
 	position:  sdl.FPoint,
 	rotation:  f64,
-	direction: Direction,
-	collider:  sdl.Rect,
-	character: Character,
 	width:     f32,
 	height:    f32,
+}
+
+Texture :: struct { 
+	transform: Transform,
+	texture: ^sdl.Texture
+}
+
+Actor :: struct {
+	direction: Direction,
+	transform: Transform,
+	collider:  sdl.Rect,
+	character: Character,
+	texture:   Texture,
 }
 
 Direction :: enum {
@@ -75,17 +84,17 @@ RenderBorderRect :: proc(
 	sdl.RenderRect(renderer, &fRect)
 }
 
-RenderPlayer :: proc(
+RenderActor :: proc(
 	renderer: ^sdl.Renderer,
 	camera: ^sdl.FRect,
-	player: ^Actor,
+	actor: ^Actor,
 ) {
 	sdl.SetRenderDrawColor(renderer, 0x00, 0xff, 0x00, 0x00)
 	fRect := sdl.FRect {
-		player.position.x,
-		player.position.y,
-		player.width,
-		player.height,
+		actor.transform.position.x,
+		actor.transform.position.y,
+		actor.transform.width,
+		actor.transform.height,
 	}
 	//  object position - camera position
 	fRect.x -= camera.x
@@ -95,8 +104,8 @@ RenderPlayer :: proc(
 
 UpdateCamera :: proc(app: ^App) {
 	//  Camera follows the player position
-	app.camera.x = app.player.position.x - .5 * f32(app.width)
-	app.camera.y = app.player.position.y - .5 * f32(app.height)
+	app.camera.x = app.player.transform.position.x - .5 * f32(app.width)
+	app.camera.y = app.player.transform.position.y - .5 * f32(app.height)
 	app.camera.w = f32(app.width)
 	app.camera.h = f32(app.height)
 	if app.camera.x < 0 {
@@ -115,37 +124,37 @@ UpdateCamera :: proc(app: ^App) {
 UpdateActor :: proc(actor: ^Actor) {
 	Interval: f32 = 10
 	if actor.direction & Direction.UP == Direction.UP {
-		actor.position.y -= Interval
+		actor.transform.position.y -= Interval
 	}
 	if actor.direction & Direction.DOWN == Direction.DOWN {
-		actor.position.y += Interval
+		actor.transform.position.y += Interval
 	}
 	if actor.direction & Direction.LEFT == Direction.LEFT {
 		//actor.position.x -= Interval
-		actor.rotation -= f64(Interval)
+		actor.transform.rotation -= f64(Interval)
 	}
 	if actor.direction & Direction.RIGHT == Direction.RIGHT {
 		//actor.position.x += Interval
-		actor.rotation += f64(Interval)
+		actor.transform.rotation += f64(Interval)
 	}
-	actor.collider.w = i32(actor.width)
-	actor.collider.h = i32(actor.height)
-	actor.collider.x = i32(actor.position.x)
-	actor.collider.y = i32(actor.position.y)
+	actor.collider.w = i32(actor.transform.width)
+	actor.collider.h = i32(actor.transform.height)
+	actor.collider.x = i32(actor.transform.position.x)
+	actor.collider.y = i32(actor.transform.position.y)
 }
 
 HandleActorInGame :: proc(actor: ^Actor, collider: ^sdl.FRect) {
-	if actor.position.x < collider.x {
-		actor.position.x = collider.x
+	if actor.transform.position.x < collider.x {
+		actor.transform.position.x = collider.x
 	}
-	if actor.position.x + actor.height > collider.x + collider.w {
-		actor.position.x = collider.x + collider.w - actor.width
+	if actor.transform.position.x + actor.transform.height > collider.x + collider.w {
+		actor.transform.position.x = collider.x + collider.w - actor.transform.width
 	}
-	if actor.position.y < collider.y {
-		actor.position.y = collider.y
+	if actor.transform.position.y < collider.y {
+		actor.transform.position.y = collider.y
 	}
-	if actor.position.y + actor.height > collider.y + collider.h {
-		actor.position.y = collider.y + collider.h - actor.height
+	if actor.transform.position.y + actor.transform.height > collider.y + collider.h {
+		actor.transform.position.y = collider.y + collider.h - actor.transform.height
 	}
 }
 

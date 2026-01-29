@@ -34,7 +34,7 @@ AppInit :: proc "c" (
 	app.width = 640
 	app.height = 480
 	app.scale = 10
-	app.rotation = 0
+	app.player.transform.rotation = 0
 	app.mainScene = new(sup.Scene)
 	app.mainScene.appEvent = MainSceneEvent
 	app.mainScene.appIterate = MainSceneIterate
@@ -124,11 +124,11 @@ AppInit :: proc "c" (
 	app.window = new(sdl.Window)
 	app.renderer = new(sdl.Renderer)
 	app.player.character = sup.Character.PLAYER
-	app.player.position.x = f32(app.width / 2)
-	app.player.position.y = f32(app.height / 2)
-	app.player.rotation = 0
-	app.player.width = 20
-	app.player.height = 20
+	app.player.transform.position.x = f32(app.width / 2)
+	app.player.transform.position.y = f32(app.height / 2)
+	app.player.transform.rotation = 0
+	app.player.transform.width = 20
+	app.player.transform.height = 20
 	app.player.direction = sup.Direction.NONE
 	sup.SetTargetFPS(&app.fps, 60)
 	app.fps.frameStartTicks = sdl.GetPerformanceCounter()
@@ -192,8 +192,8 @@ MainSceneIterate :: proc(app: ^sup.App) -> sdl.AppResult {
 	}
 	sup.RenderPlayer(app.renderer, &app.camera, &app.player)
 	tankTarget := sdl.FRect {
-		app.player.position.x - f32(app.tankBodyTexture.w) * 0.5 ,
-		app.player.position.y - f32(app.tankBodyTexture.h) * 0.5,
+		app.player.transform.position.x - f32(app.tankBodyTexture.w) * 0.5 ,
+		app.player.transform.position.y - f32(app.tankBodyTexture.h) * 0.5,
 		f32(app.tankBodyTexture.w),
 	    f32(app.tankBodyTexture.h)
 	}
@@ -203,13 +203,13 @@ MainSceneIterate :: proc(app: ^sup.App) -> sdl.AppResult {
 		app.tankBodyTexture,
 		nil,
 		&tankTarget,
-		app.player.rotation,
+		app.player.transform.rotation,
 		nil, // &tankRotationPoint,
 		sdl.FlipMode.NONE,
 	)
 	turretTarget := sdl.FRect {
-		app.player.position.x - 1 * app.scale,
-		app.player.position.y - 1 * app.scale,
+		app.player.transform.position.x - 1 * app.scale,
+		app.player.transform.position.y - 1 * app.scale,
 		6 * app.scale,
 		2 * app.scale,
 	}
@@ -219,7 +219,7 @@ MainSceneIterate :: proc(app: ^sup.App) -> sdl.AppResult {
 		app.tankTurretTexture,
 		nil,
 		&turretTarget,
-		app.player.rotation,
+		app.player.transform.rotation,
 		&turretRotationPoint,
 		sdl.FlipMode.NONE,
 	)
