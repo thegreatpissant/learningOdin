@@ -123,13 +123,6 @@ AppInit :: proc "c" (
 
 	app.window = new(sdl.Window)
 	app.renderer = new(sdl.Renderer)
-	app.player.character = sup.Character.PLAYER
-	app.player.transform.position.x = f32(app.width / 2)
-	app.player.transform.position.y = f32(app.height / 2)
-	app.player.transform.rotation = 0
-	app.player.transform.width = 20
-	app.player.transform.height = 20
-	app.player.direction = sup.Direction.NONE
 	sup.SetTargetFPS(&app.fps, 60)
 	app.fps.frameStartTicks = sdl.GetPerformanceCounter()
 	fmt.printfln("Initialize App - DONE")
@@ -153,6 +146,36 @@ AppInit :: proc "c" (
 	app.tankTurretTexture = sup.CreateTurretTexture(app.renderer, app.scale)
 	fmt.printfln("Init Textures - DONE")
 
+	fmt.printfln("Init Player")
+	app.player.character = sup.Character.PLAYER
+	app.player.transform.position.x = f32(app.width / 2)
+	app.player.transform.position.y = f32(app.height / 2)
+	app.player.transform.rotation = 0
+	app.player.transform.width = f32(app.tankBodyTexture.w)
+	app.player.transform.height = f32(app.tankBodyTexture.h)
+	app.player.direction = sup.Direction.NONE
+	app.player.texture = app.tankBodyTexture
+	app.player.transform.bodyOffset.x = f32(app.tankBodyTexture.w) * 0.5
+	app.player.transform.bodyOffset.y = f32(app.tankBodyTexture.h) * 0.5
+	app.player.transform.rotationOffset = sdl.FPoint {
+		f32(app.tankBodyTexture.w) / 2,
+		f32(app.tankBodyTexture.h) / 2,
+	}
+	turret := new(sup.Actor)
+	turret.parent = &app.player
+	turret.character = sup.Character.PLAYER
+	turret.texture = app.tankTurretTexture
+	turret.transform.rotation = 0
+	turret.transform.position.x = 0
+	turret.transform.position.y = 0
+	turret.transform.bodyOffset.x = 1 * app.scale
+	turret.transform.bodyOffset.y = 1 * app.scale
+	turret.transform.width = f32(app.tankTurretTexture.w)
+	turret.transform.height = f32(app.tankTurretTexture.h)
+	turret.transform.rotationOffset = sdl.FPoint{1 * app.scale, 1 * app.scale}
+	append(&app.player.children, turret)
+
+	fmt.printfln("Init Player - DONE")
 	return sdl.AppResult.CONTINUE
 }
 
@@ -190,39 +213,7 @@ MainSceneIterate :: proc(app: ^sup.App) -> sdl.AppResult {
 	for &rect in app.mainScene.markers {
 		sup.RenderBorderRect(app.renderer, &app.camera, &rect)
 	}
-	sup.RenderPlayer(app.renderer, &app.camera, &app.player)
-	tankTarget := sdl.FRect {
-		app.player.transform.position.x - f32(app.tankBodyTexture.w) * 0.5 ,
-		app.player.transform.position.y - f32(app.tankBodyTexture.h) * 0.5,
-		f32(app.tankBodyTexture.w),
-	    f32(app.tankBodyTexture.h)
-	}
-	tankRotationPoint := sdl.FPoint{tankTarget.w / 2, tankTarget.h / 2}
-	sdl.RenderTextureRotated(
-		app.renderer,
-		app.tankBodyTexture,
-		nil,
-		&tankTarget,
-		app.player.transform.rotation,
-		nil, // &tankRotationPoint,
-		sdl.FlipMode.NONE,
-	)
-	turretTarget := sdl.FRect {
-		app.player.transform.position.x - 1 * app.scale,
-		app.player.transform.position.y - 1 * app.scale,
-		6 * app.scale,
-		2 * app.scale,
-	}
-	turretRotationPoint := sdl.FPoint{1 * app.scale, 1 * app.scale}
-	sdl.RenderTextureRotated(
-		app.renderer,
-		app.tankTurretTexture,
-		nil,
-		&turretTarget,
-		app.player.transform.rotation,
-		&turretRotationPoint,
-		sdl.FlipMode.NONE,
-	)
+	sup.RenderTextureActor(app.renderer, &app.camera, &app.player)
 
 	return sdl.AppResult.CONTINUE
 }

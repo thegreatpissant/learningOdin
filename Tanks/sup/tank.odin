@@ -27,7 +27,7 @@ CreateTankTexture :: proc(
 	)
 	sdl.SetTextureBlendMode(texture, {sdl.BlendMode.BLEND})
 	sdl.SetRenderTarget(renderer, texture)
-	origBlendMode : sdl.BlendMode
+	origBlendMode: sdl.BlendMode
 	sdl.GetRenderDrawBlendMode(renderer, &origBlendMode)
 	//sdl.SetRenderDrawBlendMode(renderer, {sdl.BlendMode.BLEND})
 	sdl.SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00)
@@ -114,7 +114,7 @@ CreateTurretTexture :: proc(
 	)
 	sdl.SetTextureBlendMode(texture, {sdl.BlendMode.BLEND})
 	sdl.SetRenderTarget(renderer, texture)
-	origBlendMode : sdl.BlendMode
+	origBlendMode: sdl.BlendMode
 	sdl.GetRenderDrawBlendMode(renderer, &origBlendMode)
 	//sdl.SetRenderDrawBlendMode(renderer, {sdl.BlendMode.BLEND})
 	sdl.SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00)
