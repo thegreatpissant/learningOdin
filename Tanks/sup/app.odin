@@ -1,6 +1,7 @@
 package sup
 
 import fmt "core:fmt"
+import math "core:math"
 import sdl "vendor:sdl3"
 
 App :: struct {
@@ -29,9 +30,15 @@ Transform :: struct {
 }
 
 Rigidbody :: struct {
-	mass: f32,
-	vx:   f32,
-	vy:   f32,
+	mass:                f32,
+	vx:                  f32,
+	vy:                  f32,
+	maxVelocity:         f32,
+	velocity:            f32,
+	acceleration:        f32,
+	maxAngularVelocity:  f32,
+	angularVelocity:     f32,
+	angularAcceleration: f32,
 }
 
 Actor :: struct {
@@ -46,11 +53,13 @@ Actor :: struct {
 }
 
 Direction :: enum {
-	NONE  = 0,
-	UP    = 1 << 0,
-	DOWN  = 1 << 1,
-	LEFT  = 1 << 2,
-	RIGHT = 1 << 3,
+	NONE     = 0,
+	UP       = 1 << 0,
+	DOWN     = 1 << 1,
+	LEFT     = 1 << 2,
+	RIGHT    = 1 << 3,
+	FORWARD  = 1 << 4,
+	BACKWARD = 1 << 5,
 }
 
 Character :: enum {
@@ -174,30 +183,43 @@ UpdateCamera :: proc(app: ^App) {
 	}
 }
 
-UpdateActor :: proc(actor: ^Actor) {
-	Interval: f32 = 10
-	if actor.direction & Direction.UP == Direction.UP {
-		actor.transform.position.y -= Interval
+UpdateActor :: proc(actor: ^Actor, deltaTime: f32) {
+	Interval: f32 = deltaTime
+	if actor.direction & Direction.FORWARD == Direction.FORWARD {
+		actor.rigidbody.velocity += actor.rigidbody.acceleration
 	}
-	if actor.direction & Direction.DOWN == Direction.DOWN {
-		actor.transform.position.y += Interval
+	if actor.direction & Direction.BACKWARD == Direction.BACKWARD {
+		actor.rigidbody.velocity -= actor.rigidbody.acceleration
 	}
 	if actor.direction & Direction.LEFT == Direction.LEFT {
-		actor.transform.rotation -= f64(Interval)
+		actor.rigidbody.angularVelocity -= actor.rigidbody.angularAcceleration
+	} else if actor.direction & Direction.RIGHT == Direction.RIGHT {
+		actor.rigidbody.angularVelocity += actor.rigidbody.angularAcceleration
+	} else {
+		actor.rigidbody.angularVelocity = 0
 	}
-	if actor.direction & Direction.RIGHT == Direction.RIGHT {
-		actor.transform.rotation += f64(Interval)
-	}
+	actor.rigidbody.velocity = math.clamp(
+		actor.rigidbody.velocity,
+		-actor.rigidbody.maxVelocity,
+		actor.rigidbody.maxVelocity,
+	)
+	actor.rigidbody.angularVelocity = math.clamp(
+		actor.rigidbody.angularVelocity,
+		-actor.rigidbody.maxAngularVelocity,
+		actor.rigidbody.maxAngularVelocity,
+	)
+	actor.transform.position.x += Interval * actor.rigidbody.velocity
+	actor.transform.rotation += f64(Interval * actor.rigidbody.angularVelocity)
 	actor.collider.w = i32(actor.transform.width)
 	actor.collider.h = i32(actor.transform.height)
 	actor.collider.x = i32(actor.transform.position.x)
 	actor.collider.y = i32(actor.transform.position.y)
 	for &child in actor.children {
-		UpdateActor(child)
+		UpdateActor(child, deltaTime)
 	}
 }
 
-HandleActorInGame :: proc(actor: ^Actor, collider: ^sdl.FRect) {
+HandleActorCollisions :: proc(actor: ^Actor, collider: ^sdl.FRect) {
 	if actor.transform.position.x < collider.x {
 		actor.transform.position.x = collider.x
 	}
@@ -226,9 +248,9 @@ HandlePlayerEvent :: proc(event: ^sdl.Event, app: ^App) {
 		case sdl.Scancode.D:
 			app.player.direction |= Direction.RIGHT
 		case sdl.Scancode.W:
-			app.player.direction |= Direction.UP
+			app.player.direction |= Direction.FORWARD
 		case sdl.Scancode.S:
-			app.player.direction |= Direction.DOWN
+			app.player.direction |= Direction.BACKWARD
 		case sdl.Scancode.H:
 			app.player.children[0].direction |= Direction.LEFT
 		case sdl.Scancode.L:
@@ -241,9 +263,9 @@ HandlePlayerEvent :: proc(event: ^sdl.Event, app: ^App) {
 		case sdl.Scancode.D:
 			app.player.direction &~= Direction.RIGHT
 		case sdl.Scancode.W:
-			app.player.direction &~= Direction.UP
+			app.player.direction &~= Direction.FORWARD
 		case sdl.Scancode.S:
-			app.player.direction &~= Direction.DOWN
+			app.player.direction &~= Direction.BACKWARD
 		case sdl.Scancode.H:
 			app.player.children[0].direction &~= Direction.LEFT
 		case sdl.Scancode.L:

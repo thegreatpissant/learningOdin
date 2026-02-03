@@ -161,6 +161,11 @@ AppInit :: proc "c" (
 		f32(app.tankBodyTexture.w) / 2,
 		f32(app.tankBodyTexture.h) / 2,
 	}
+	app.player.rigidbody.acceleration = 50
+	app.player.rigidbody.maxVelocity = 70
+	app.player.rigidbody.maxAngularVelocity = 40
+	app.player.rigidbody.angularAcceleration = 10
+
 	turret := new(sup.Actor)
 	turret.parent = &app.player
 	turret.character = sup.Character.PLAYER
@@ -173,6 +178,9 @@ AppInit :: proc "c" (
 	turret.transform.width = f32(app.tankTurretTexture.w)
 	turret.transform.height = f32(app.tankTurretTexture.h)
 	turret.transform.rotationOffset = sdl.FPoint{1 * app.scale, 1 * app.scale}
+	turret.rigidbody.maxVelocity = 40
+	turret.rigidbody.maxAngularVelocity = 40
+	turret.rigidbody.angularAcceleration = 10
 	append(&app.player.children, turret)
 
 	fmt.printfln("Init Player - DONE")
@@ -202,8 +210,8 @@ AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 
 MainSceneIterate :: proc(app: ^sup.App) -> sdl.AppResult {
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
-	sup.UpdateActor(&app.player)
-	sup.HandleActorInGame(&app.player, &app.mainScene.borderRect)
+	sup.UpdateActor(&app.player, deltaTime)
+	sup.HandleActorCollisions(&app.player, &app.mainScene.borderRect)
 	sup.UpdateCamera(app)
 	sdl.SetRenderTarget(app.renderer, nil)
 	sdl.SetRenderDrawColor(app.renderer, 0x00, 0x00, 0x00, sdl.ALPHA_OPAQUE)
