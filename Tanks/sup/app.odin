@@ -34,6 +34,9 @@ Rigidbody :: struct {
 	vx:                  f32,
 	vy:                  f32,
 	maxVelocity:         f32,
+	lockXAxis:           bool,
+	lockYAxis:           bool,
+	lockRotation:        bool,
 	velocity:            f32,
 	acceleration:        f32,
 	maxAngularVelocity:  f32,
@@ -92,9 +95,9 @@ GetPosition :: proc(actor: ^Actor) -> sdl.FPoint {
 		return actor.transform.position
 	}
 	parentPosition := GetPosition(actor.parent)
-	return sdl.FPoint { 
+	return sdl.FPoint {
 		actor.transform.position.x + parentPosition.x,
-		actor.transform.position.y + parentPosition.y
+		actor.transform.position.y + parentPosition.y,
 	}
 }
 
@@ -125,7 +128,7 @@ RenderTextureActor :: proc(
 ) {
 	position := GetPosition(actor)
 	target := sdl.FRect {
-		position.x - camera.x -  actor.transform.bodyOffset.x,
+		position.x - camera.x - actor.transform.bodyOffset.x,
 		position.y - camera.y - actor.transform.bodyOffset.y,
 		actor.transform.width,
 		actor.transform.height,
@@ -188,13 +191,12 @@ UpdateCamera :: proc(app: ^App) {
 }
 
 UpdateActor :: proc(actor: ^Actor, deltaTime: f32) {
-	Interval:= deltaTime
+	Interval := deltaTime
 	if actor.direction & Direction.FORWARD == Direction.FORWARD {
 		actor.rigidbody.velocity += actor.rigidbody.acceleration
-	}
-	else if actor.direction & Direction.BACKWARD == Direction.BACKWARD {
+	} else if actor.direction & Direction.BACKWARD == Direction.BACKWARD {
 		actor.rigidbody.velocity -= actor.rigidbody.acceleration
-	} else { 
+	} else {
 		actor.rigidbody.velocity = 0
 	}
 	if actor.direction & Direction.LEFT == Direction.LEFT {
@@ -214,13 +216,19 @@ UpdateActor :: proc(actor: ^Actor, deltaTime: f32) {
 		-actor.rigidbody.maxAngularVelocity,
 		actor.rigidbody.maxAngularVelocity,
 	)
-	actor.transform.rotation += Interval * actor.rigidbody.angularVelocity
 	sinR := math.sin(actor.transform.rotation)
 	cosR := math.cos(actor.transform.rotation)
 	nX := Interval * actor.rigidbody.velocity * cosR + Interval * sinR
 	nY := Interval * actor.rigidbody.velocity * (-sinR) + Interval * cosR
-	actor.transform.position.x += nX
-	actor.transform.position.y += nY
+	if !actor.rigidbody.lockRotation {
+		actor.transform.rotation += Interval * actor.rigidbody.angularVelocity
+	}
+	if !actor.rigidbody.lockXAxis {
+		actor.transform.position.x += nX
+	}
+	if !actor.rigidbody.lockYAxis {
+		actor.transform.position.y += nY
+	}
 	actor.collider.w = i32(actor.transform.width)
 	actor.collider.h = i32(actor.transform.height)
 	actor.collider.x = i32(actor.transform.position.x)

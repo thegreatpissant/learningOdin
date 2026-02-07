@@ -15,3 +15,4 @@ Notes:
 * The clones are cattle
 * Should I need a UI maybe use microui https://gist.github.com/gingerBill/5bbcca224bf8d9dcd09dde38b2567d10
 * The ai stuff is ideas I had for using llm's for code review.  Havent used it yet, otherwise hand crafted farm to table code.  :-)
+* TODO: Update physics timestep to be independent of framerate https://gafferongames.com/post/fix_your_timestep/

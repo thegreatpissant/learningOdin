@@ -183,6 +183,8 @@ AppInit :: proc "c" (
 	turret.rigidbody.maxVelocity = 40
 	turret.rigidbody.maxAngularVelocity = 40
 	turret.rigidbody.angularAcceleration = 10
+	turret.rigidbody.lockXAxis = true
+	turret.rigidbody.lockYAxis = true
 	turret.direction = sup.Direction.NONE
 	append(&app.player.children, turret)
 
