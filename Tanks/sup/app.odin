@@ -22,7 +22,7 @@ App :: struct {
 
 Transform :: struct {
 	position:       sdl.FPoint,
-	rotation:       f64,
+	rotation:       f32,
 	rotationOffset: sdl.FPoint,
 	bodyOffset:     sdl.FPoint,
 	width:          f32,
@@ -91,10 +91,14 @@ GetPosition :: proc(actor: ^Actor) -> sdl.FPoint {
 	if actor.parent == nil {
 		return actor.transform.position
 	}
-	return actor.transform.position + GetPosition(actor.parent)
+	parentPosition := GetPosition(actor.parent)
+	return sdl.FPoint { 
+		actor.transform.position.x + parentPosition.x,
+		actor.transform.position.y + parentPosition.y
+	}
 }
 
-GetRotation :: proc(actor: ^Actor) -> f64 {
+GetRotation :: proc(actor: ^Actor) -> f32 {
 	if actor.parent == nil {
 		return actor.transform.rotation
 	}
@@ -121,21 +125,21 @@ RenderTextureActor :: proc(
 ) {
 	position := GetPosition(actor)
 	target := sdl.FRect {
-		position.x - actor.transform.bodyOffset.x,
-		position.y - actor.transform.bodyOffset.y,
+		position.x - camera.x -  actor.transform.bodyOffset.x,
+		position.y - camera.y - actor.transform.bodyOffset.y,
 		actor.transform.width,
 		actor.transform.height,
 	}
 
 	//  object position - camera position
-	target.x -= camera.x
-	target.y -= camera.y
+	//target.x -= camera.x
+	//target.y -= camera.y
 	sdl.RenderTextureRotated(
 		renderer,
 		actor.texture,
 		nil,
 		&target,
-		GetRotation(actor),
+		f64(GetRotation(actor)),
 		&actor.transform.rotationOffset,
 		sdl.FlipMode.NONE,
 	)
@@ -184,12 +188,14 @@ UpdateCamera :: proc(app: ^App) {
 }
 
 UpdateActor :: proc(actor: ^Actor, deltaTime: f32) {
-	Interval: f32 = deltaTime
+	Interval:= deltaTime
 	if actor.direction & Direction.FORWARD == Direction.FORWARD {
 		actor.rigidbody.velocity += actor.rigidbody.acceleration
 	}
-	if actor.direction & Direction.BACKWARD == Direction.BACKWARD {
+	else if actor.direction & Direction.BACKWARD == Direction.BACKWARD {
 		actor.rigidbody.velocity -= actor.rigidbody.acceleration
+	} else { 
+		actor.rigidbody.velocity = 0
 	}
 	if actor.direction & Direction.LEFT == Direction.LEFT {
 		actor.rigidbody.angularVelocity -= actor.rigidbody.angularAcceleration
@@ -208,8 +214,13 @@ UpdateActor :: proc(actor: ^Actor, deltaTime: f32) {
 		-actor.rigidbody.maxAngularVelocity,
 		actor.rigidbody.maxAngularVelocity,
 	)
-	actor.transform.position.x += Interval * actor.rigidbody.velocity
-	actor.transform.rotation += f64(Interval * actor.rigidbody.angularVelocity)
+	actor.transform.rotation += Interval * actor.rigidbody.angularVelocity
+	sinR := math.sin(actor.transform.rotation)
+	cosR := math.cos(actor.transform.rotation)
+	nX := Interval * actor.rigidbody.velocity * cosR + Interval * sinR
+	nY := Interval * actor.rigidbody.velocity * (-sinR) + Interval * cosR
+	actor.transform.position.x += nX
+	actor.transform.position.y += nY
 	actor.collider.w = i32(actor.transform.width)
 	actor.collider.h = i32(actor.transform.height)
 	actor.collider.x = i32(actor.transform.position.x)

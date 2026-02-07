@@ -47,7 +47,7 @@ UnPauseTimer :: proc(timer: ^Timer) {
 		return
 	}
 	timer.paused = false
-	ticks := sdl.GetPerformanceCounter()
+	ticks := sdl.GetTicksNS()
 	timer.startTicks = ticks - timer.pauseTicks
 	timer.pauseTicks = 0
 }
@@ -65,7 +65,7 @@ GetTicks :: proc(timer: ^Timer) -> u64 {
 		if timer.paused {
 			return timer.pauseTicks
 		} else {
-			return sdl.GetPerformanceCounter() - timer.startTicks
+			return sdl.GetTicksNS() - timer.startTicks
 		}
 	}
 	return 0
@@ -88,13 +88,13 @@ SetTargetFPS :: proc(fps: ^FPS, targetFPS: u64) {
 
 StartFrame :: proc(fps: ^FPS) {
 	savedStartTicks := fps.frameStartTicks
-	fps.frameStartTicks = sdl.GetPerformanceCounter()
+	fps.frameStartTicks = sdl.GetTicksNS()
 	fps.delta = fps.frameStartTicks - savedStartTicks
 	fps.fps = sdl.NS_PER_SECOND / fps.delta
 }
 
 EndFrame :: proc(fps: ^FPS) {
-	elapsedTicks := sdl.GetPerformanceCounter() - fps.frameStartTicks
+	elapsedTicks := sdl.GetTicksNS() - fps.frameStartTicks
 	delay := elapsedTicks > fps.targetFPSns ? 0 : fps.targetFPSns - elapsedTicks
 	sdl.DelayPrecise(delay)
 }

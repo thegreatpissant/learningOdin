@@ -29,7 +29,7 @@ CreateTankTexture :: proc(
 	sdl.SetRenderTarget(renderer, texture)
 	origBlendMode: sdl.BlendMode
 	sdl.GetRenderDrawBlendMode(renderer, &origBlendMode)
-	//sdl.SetRenderDrawBlendMode(renderer, {sdl.BlendMode.BLEND})
+	sdl.SetRenderDrawBlendMode(renderer, {sdl.BlendMode.BLEND})
 	sdl.SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x00)
 	sdl.RenderClear(renderer)
 	sdl.SetRenderDrawColor(renderer, 0x00, 0xff, 0x00, 0xff)

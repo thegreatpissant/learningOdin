@@ -124,7 +124,7 @@ AppInit :: proc "c" (
 	app.window = new(sdl.Window)
 	app.renderer = new(sdl.Renderer)
 	sup.SetTargetFPS(&app.fps, 60)
-	app.fps.frameStartTicks = sdl.GetPerformanceCounter()
+	app.fps.frameStartTicks = sdl.GetTicksNS()
 	fmt.printfln("Initialize App - DONE")
 
 	fmt.printfln("Initialize Window")
@@ -178,9 +178,12 @@ AppInit :: proc "c" (
 	turret.transform.width = f32(app.tankTurretTexture.w)
 	turret.transform.height = f32(app.tankTurretTexture.h)
 	turret.transform.rotationOffset = sdl.FPoint{1 * app.scale, 1 * app.scale}
+	turret.rigidbody.acceleration = 0
+	turret.rigidbody.velocity = 0
 	turret.rigidbody.maxVelocity = 40
 	turret.rigidbody.maxAngularVelocity = 40
 	turret.rigidbody.angularAcceleration = 10
+	turret.direction = sup.Direction.NONE
 	append(&app.player.children, turret)
 
 	fmt.printfln("Init Player - DONE")
@@ -210,6 +213,7 @@ AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 
 MainSceneIterate :: proc(app: ^sup.App) -> sdl.AppResult {
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
+	fmt.printfln("deltatime: %v", deltaTime)
 	sup.UpdateActor(&app.player, deltaTime)
 	sup.HandleActorCollisions(&app.player, &app.mainScene.borderRect)
 	sup.UpdateCamera(app)
