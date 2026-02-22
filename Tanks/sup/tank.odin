@@ -34,26 +34,19 @@ CreateTankTexture :: proc(
 	sdl.RenderClear(renderer)
 	sdl.SetRenderDrawColor(renderer, 0x00, 0xff, 0x00, 0xff)
 
-	centerPoint := sdl.FPoint{f32(texture.w) * 0.5, f32(texture.h) * 0.5}
-	RenderTank(renderer, &centerPoint, scale)
+	centerPoint := Vec2{f32(texture.w) * 0.5, f32(texture.h) * 0.5}
+	RenderTank(renderer, centerPoint, scale)
 	sdl.SetRenderDrawBlendMode(renderer, origBlendMode)
 	sdl.SetRenderTarget(renderer, nil)
 	return texture
 }
 
-RenderTank :: proc(
-	renderer: ^sdl.Renderer,
-	position: ^sdl.FPoint,
-	scale: f32,
-) {
+RenderTank :: proc(renderer: ^sdl.Renderer, position: Vec2, scale: f32) {
 	// Render the tank body
 	// 6x4
 	bodyWidth := 6 * scale
 	bodyHeight := 4 * scale
-	topLeft := sdl.FPoint {
-		position.x - 0.5 * bodyWidth,
-		position.y - .5 * bodyHeight,
-	}
+	topLeft := Vec2{position.x - 0.5 * bodyWidth, position.y - .5 * bodyHeight}
 
 	body := sdl.FRect{topLeft.x, topLeft.y, bodyWidth, bodyHeight}
 	sdl.RenderRect(renderer, &body)
@@ -121,24 +114,17 @@ CreateTurretTexture :: proc(
 	sdl.RenderClear(renderer)
 	sdl.SetRenderDrawColor(renderer, 0x00, 0xff, 0x00, 0xff)
 
-	turretCenterPoint := sdl.FPoint{1 * scale, 1 * scale}
+	turretCenterPoint := Vec2{1 * scale, 1 * scale}
 	RenderTurret(renderer, &turretCenterPoint, scale)
 	sdl.SetRenderTarget(renderer, nil)
 	sdl.SetRenderDrawBlendMode(renderer, origBlendMode)
 	return texture
 }
 
-RenderTurret :: proc(
-	renderer: ^sdl.Renderer,
-	position: ^sdl.FPoint,
-	scale: f32,
-) {
+RenderTurret :: proc(renderer: ^sdl.Renderer, position: ^Vec2, scale: f32) {
 	bodyWidth := 2 * scale
 	bodyHeight := 2 * scale
-	topLeft := sdl.FPoint {
-		position.x - bodyWidth * 0.5,
-		position.y - bodyHeight * 0.5,
-	}
+	topLeft := position^ - Vec2{bodyWidth, bodyHeight} * 0.5
 	turret := sdl.FRect{topLeft.x, topLeft.y, bodyWidth, bodyHeight}
 	cannonWidth := 4 * scale
 	cannonHeight := 0.5 * scale

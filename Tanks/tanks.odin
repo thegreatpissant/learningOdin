@@ -41,7 +41,7 @@ AppInit :: proc "c" (
 	app.mainScene.width = 2000
 	app.mainScene.height = 750
 	borderWidth: f32 = 10
-	app.mainScene.borderRect = sdl.FRect {
+	app.mainScene.borderRect = sup.GameRect {
 		1 + borderWidth,
 		0 + borderWidth,
 		app.mainScene.width - 2 * borderWidth,
@@ -49,7 +49,7 @@ AppInit :: proc "c" (
 	}
 	append(
 		&app.mainScene.markers,
-		sdl.FRect {
+		sup.GameRect {
 			app.mainScene.borderRect.x + 40,
 			app.mainScene.borderRect.y + 40,
 			20,
@@ -58,7 +58,7 @@ AppInit :: proc "c" (
 	)
 	append(
 		&app.mainScene.markers,
-		sdl.FRect {
+		sup.GameRect {
 			app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80,
 			app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80,
 			20,
@@ -67,7 +67,7 @@ AppInit :: proc "c" (
 	)
 	append(
 		&app.mainScene.markers,
-		sdl.FRect {
+		sup.GameRect {
 			app.mainScene.borderRect.x + 120,
 			app.mainScene.borderRect.y + 40,
 			20,
@@ -76,7 +76,7 @@ AppInit :: proc "c" (
 	)
 	append(
 		&app.mainScene.markers,
-		sdl.FRect {
+		sup.GameRect {
 			app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80,
 			app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80,
 			20,
@@ -85,7 +85,7 @@ AppInit :: proc "c" (
 	)
 	append(
 		&app.mainScene.markers,
-		sdl.FRect {
+		sup.GameRect {
 			app.mainScene.borderRect.x + 400,
 			app.mainScene.borderRect.y + 40,
 			20,
@@ -94,7 +94,7 @@ AppInit :: proc "c" (
 	)
 	append(
 		&app.mainScene.markers,
-		sdl.FRect {
+		sup.GameRect {
 			app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80,
 			app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80,
 			20,
@@ -103,7 +103,7 @@ AppInit :: proc "c" (
 	)
 	append(
 		&app.mainScene.markers,
-		sdl.FRect {
+		sup.GameRect {
 			app.mainScene.borderRect.x + 1200,
 			app.mainScene.borderRect.y + 40,
 			20,
@@ -112,7 +112,7 @@ AppInit :: proc "c" (
 	)
 	append(
 		&app.mainScene.markers,
-		sdl.FRect {
+		sup.GameRect {
 			app.mainScene.borderRect.x + app.mainScene.borderRect.w - 80,
 			app.mainScene.borderRect.y + app.mainScene.borderRect.h - 80,
 			20,
@@ -157,9 +157,9 @@ AppInit :: proc "c" (
 	app.player.texture = app.tankBodyTexture
 	app.player.transform.bodyOffset.x = f32(app.tankBodyTexture.w) * 0.5
 	app.player.transform.bodyOffset.y = f32(app.tankBodyTexture.h) * 0.5
-	app.player.transform.rotationOffset = sdl.FPoint {
-		f32(app.tankBodyTexture.w) / 2,
-		f32(app.tankBodyTexture.h) / 2,
+	app.player.transform.rotationOffset = sup.Vec2 {
+		f32(app.tankBodyTexture.w) * 0.5,
+		f32(app.tankBodyTexture.h) * 0.5,
 	}
 	app.player.rigidbody.acceleration = 50
 	app.player.rigidbody.maxVelocity = 70
@@ -177,7 +177,7 @@ AppInit :: proc "c" (
 	turret.transform.bodyOffset.y = 1 * app.scale
 	turret.transform.width = f32(app.tankTurretTexture.w)
 	turret.transform.height = f32(app.tankTurretTexture.h)
-	turret.transform.rotationOffset = sdl.FPoint{1 * app.scale, 1 * app.scale}
+	turret.transform.rotationOffset = sup.Vec2{1 * app.scale, 1 * app.scale}
 	turret.rigidbody.acceleration = 0
 	turret.rigidbody.velocity = 0
 	turret.rigidbody.maxVelocity = 40
@@ -215,7 +215,6 @@ AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 
 MainSceneIterate :: proc(app: ^sup.App) -> sdl.AppResult {
 	deltaTime := f32(app.fps.delta) / f32(sdl.NS_PER_SECOND)
-	fmt.printfln("deltatime: %v", deltaTime)
 	sup.UpdateActor(&app.player, deltaTime)
 	sup.HandleActorCollisions(&app.player, &app.mainScene.borderRect)
 	sup.UpdateCamera(app)

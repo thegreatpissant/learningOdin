@@ -4,6 +4,15 @@ import fmt "core:fmt"
 import math "core:math"
 import sdl "vendor:sdl3"
 
+Vec2 :: distinct [2]f32
+#assert(size_of(Vec2) == size_of(sdl.FPoint))
+
+GameRect :: struct {
+	x, y: f32,
+	w, h: f32,
+}
+#assert(size_of(GameRect) == size_of(sdl.FRect))
+
 App :: struct {
 	title:             cstring,
 	width:             i32,
@@ -14,17 +23,17 @@ App :: struct {
 	scene:             ^Scene,
 	mainScene:         ^Scene,
 	player:            Actor,
-	camera:            sdl.FRect,
+	camera:            GameRect,
 	scale:             f32,
 	tankBodyTexture:   ^sdl.Texture,
 	tankTurretTexture: ^sdl.Texture,
 }
 
 Transform :: struct {
-	position:       sdl.FPoint,
+	position:       Vec2,
 	rotation:       f32,
-	rotationOffset: sdl.FPoint,
-	bodyOffset:     sdl.FPoint,
+	rotationOffset: Vec2,
+	bodyOffset:     Vec2,
 	width:          f32,
 	height:         f32,
 }
@@ -82,20 +91,20 @@ DOOR :: struct {
 }
 
 Scene :: struct {
-	borderRect: sdl.FRect,
-	markers:    [dynamic]sdl.FRect,
+	borderRect: GameRect,
+	markers:    [dynamic]GameRect,
 	width:      f32,
 	height:     f32,
 	appIterate: proc(app: ^App) -> sdl.AppResult,
 	appEvent:   proc(app: ^App, event: ^sdl.Event) -> sdl.AppResult,
 }
 
-GetPosition :: proc(actor: ^Actor) -> sdl.FPoint {
+GetPosition :: proc(actor: ^Actor) -> Vec2 {
 	if actor.parent == nil {
 		return actor.transform.position
 	}
 	parentPosition := GetPosition(actor.parent)
-	return sdl.FPoint {
+	return Vec2 {
 		actor.transform.position.x + parentPosition.x,
 		actor.transform.position.y + parentPosition.y,
 	}
@@ -110,8 +119,8 @@ GetRotation :: proc(actor: ^Actor) -> f32 {
 
 RenderBorderRect :: proc(
 	renderer: ^sdl.Renderer,
-	camera: ^sdl.FRect,
-	border: ^sdl.FRect,
+	camera: ^GameRect,
+	border: ^GameRect,
 ) {
 	sdl.SetRenderDrawColor(renderer, 0x00, 0xff, 0x00, 0x00)
 	fRect := sdl.FRect{border.x, border.y, border.w, border.h}
@@ -123,7 +132,7 @@ RenderBorderRect :: proc(
 
 RenderTextureActor :: proc(
 	renderer: ^sdl.Renderer,
-	camera: ^sdl.FRect,
+	camera: ^GameRect,
 	actor: ^Actor,
 ) {
 	position := GetPosition(actor)
@@ -143,7 +152,7 @@ RenderTextureActor :: proc(
 		nil,
 		&target,
 		f64(GetRotation(actor)),
-		&actor.transform.rotationOffset,
+		(^sdl.FPoint)(&actor.transform.rotationOffset),
 		sdl.FlipMode.NONE,
 	)
 
@@ -154,7 +163,7 @@ RenderTextureActor :: proc(
 
 RenderActor :: proc(
 	renderer: ^sdl.Renderer,
-	camera: ^sdl.FRect,
+	camera: ^GameRect,
 	actor: ^Actor,
 ) {
 	sdl.SetRenderDrawColor(renderer, 0x00, 0xff, 0x00, 0x00)
@@ -197,14 +206,14 @@ UpdateActor :: proc(actor: ^Actor, deltaTime: f32) {
 	} else if actor.direction & Direction.BACKWARD == Direction.BACKWARD {
 		actor.rigidbody.velocity -= actor.rigidbody.acceleration
 	} else {
-		actor.rigidbody.velocity = 0
+		actor.rigidbody.velocity *= 0.9
 	}
 	if actor.direction & Direction.LEFT == Direction.LEFT {
 		actor.rigidbody.angularVelocity -= actor.rigidbody.angularAcceleration
 	} else if actor.direction & Direction.RIGHT == Direction.RIGHT {
 		actor.rigidbody.angularVelocity += actor.rigidbody.angularAcceleration
 	} else {
-		actor.rigidbody.angularVelocity = 0
+		actor.rigidbody.angularVelocity *= 0.9
 	}
 	actor.rigidbody.velocity = math.clamp(
 		actor.rigidbody.velocity,
@@ -218,19 +227,21 @@ UpdateActor :: proc(actor: ^Actor, deltaTime: f32) {
 	)
 
 	rad := math.to_radians(actor.transform.rotation)
-	nX := actor.rigidbody.velocity * math.cos(rad) * Interval
-	nY := actor.rigidbody.velocity * math.sin(rad) * Interval
+	direction := Vec2{math.cos(rad), math.sin(rad)}
+	displacement := direction * actor.rigidbody.velocity * Interval
+	if actor.rigidbody.lockXAxis {
+		displacement.x = 0
+	}
+	if actor.rigidbody.lockYAxis {
+		displacement.y = 0
+	}
+	actor.transform.position += displacement
 
 	if !actor.rigidbody.lockRotation {
 
 		actor.transform.rotation += Interval * actor.rigidbody.angularVelocity
 	}
-	if !actor.rigidbody.lockXAxis {
-		actor.transform.position.x += nX
-	}
-	if !actor.rigidbody.lockYAxis {
-		actor.transform.position.y += nY
-	}
+
 	actor.collider.w = i32(actor.transform.width)
 	actor.collider.h = i32(actor.transform.height)
 	actor.collider.x = i32(actor.transform.position.x)
@@ -240,7 +251,7 @@ UpdateActor :: proc(actor: ^Actor, deltaTime: f32) {
 	}
 }
 
-HandleActorCollisions :: proc(actor: ^Actor, collider: ^sdl.FRect) {
+HandleActorCollisions :: proc(actor: ^Actor, collider: ^GameRect) {
 	if actor.transform.position.x < collider.x {
 		actor.transform.position.x = collider.x
 	}
