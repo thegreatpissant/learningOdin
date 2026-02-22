@@ -216,11 +216,13 @@ UpdateActor :: proc(actor: ^Actor, deltaTime: f32) {
 		-actor.rigidbody.maxAngularVelocity,
 		actor.rigidbody.maxAngularVelocity,
 	)
-	sinR := math.sin(actor.transform.rotation)
-	cosR := math.cos(actor.transform.rotation)
-	nX := Interval * actor.rigidbody.velocity * cosR + Interval * sinR
-	nY := Interval * actor.rigidbody.velocity * (-sinR) + Interval * cosR
+
+	rad := math.to_radians(actor.transform.rotation)
+	nX := actor.rigidbody.velocity * math.cos(rad) * Interval
+	nY := actor.rigidbody.velocity * math.sin(rad) * Interval
+
 	if !actor.rigidbody.lockRotation {
+
 		actor.transform.rotation += Interval * actor.rigidbody.angularVelocity
 	}
 	if !actor.rigidbody.lockXAxis {
