@@ -51,10 +51,11 @@ Rigidbody :: struct {
 	maxAngularVelocity:  f32,
 	angularVelocity:     f32,
 	angularAcceleration: f32,
+	angularDamping:      f32,
 }
 
 Actor :: struct {
-	direction: Direction,
+	direction: Directions,
 	transform: Transform,
 	collider:  sdl.Rect,
 	character: Character,
@@ -64,6 +65,7 @@ Actor :: struct {
 	parent:    ^Actor,
 }
 
+Directions :: distinct bit_set[Direction]
 Direction :: enum {
 	NONE     = 0,
 	UP       = 1 << 0,
@@ -201,19 +203,24 @@ UpdateCamera :: proc(app: ^App) {
 
 UpdateActor :: proc(actor: ^Actor, deltaTime: f32) {
 	Interval := deltaTime
-	if actor.direction & Direction.FORWARD == Direction.FORWARD {
-		actor.rigidbody.velocity += actor.rigidbody.acceleration
-	} else if actor.direction & Direction.BACKWARD == Direction.BACKWARD {
-		actor.rigidbody.velocity -= actor.rigidbody.acceleration
+	if .FORWARD in actor.direction {
+		actor.rigidbody.velocity += actor.rigidbody.acceleration * Interval
+	} else if .BACKWARD in actor.direction {
+		actor.rigidbody.velocity -= actor.rigidbody.acceleration * Interval
 	} else {
-		actor.rigidbody.velocity *= 0.9
+		actor.rigidbody.velocity *= math.pow(0.1, Interval)
 	}
-	if actor.direction & Direction.LEFT == Direction.LEFT {
-		actor.rigidbody.angularVelocity -= actor.rigidbody.angularAcceleration
-	} else if actor.direction & Direction.RIGHT == Direction.RIGHT {
-		actor.rigidbody.angularVelocity += actor.rigidbody.angularAcceleration
+	if .LEFT in actor.direction {
+		actor.rigidbody.angularVelocity -=
+			actor.rigidbody.angularAcceleration * Interval
+	} else if .RIGHT in actor.direction {
+		actor.rigidbody.angularVelocity +=
+			actor.rigidbody.angularAcceleration * Interval
 	} else {
-		actor.rigidbody.angularVelocity *= 0.9
+		actor.rigidbody.angularVelocity *= math.pow(
+			actor.rigidbody.angularDamping,
+			Interval,
+		)
 	}
 	actor.rigidbody.velocity = math.clamp(
 		actor.rigidbody.velocity,
@@ -238,8 +245,7 @@ UpdateActor :: proc(actor: ^Actor, deltaTime: f32) {
 	actor.transform.position += displacement
 
 	if !actor.rigidbody.lockRotation {
-
-		actor.transform.rotation += Interval * actor.rigidbody.angularVelocity
+		actor.transform.rotation += actor.rigidbody.angularVelocity * Interval
 	}
 
 	actor.collider.w = i32(actor.transform.width)
@@ -276,31 +282,31 @@ HandlePlayerEvent :: proc(event: ^sdl.Event, app: ^App) {
 	case sdl.EventType.KEY_DOWN:
 		#partial switch (event.key.scancode) {
 		case sdl.Scancode.A:
-			app.player.direction |= Direction.LEFT
+			app.player.direction += {Direction.LEFT}
 		case sdl.Scancode.D:
-			app.player.direction |= Direction.RIGHT
+			app.player.direction += {Direction.RIGHT}
 		case sdl.Scancode.W:
-			app.player.direction |= Direction.FORWARD
+			app.player.direction += {Direction.FORWARD}
 		case sdl.Scancode.S:
-			app.player.direction |= Direction.BACKWARD
+			app.player.direction += {Direction.BACKWARD}
 		case sdl.Scancode.H:
-			app.player.children[0].direction |= Direction.LEFT
+			app.player.children[0].direction += {Direction.LEFT}
 		case sdl.Scancode.L:
-			app.player.children[0].direction |= Direction.RIGHT
+			app.player.children[0].direction += {Direction.RIGHT}
 		}
 	case sdl.EventType.KEY_UP:
 		#partial switch (event.key.scancode) {
 		case sdl.Scancode.A:
-			app.player.direction &~= Direction.LEFT
+			app.player.direction -= {Direction.LEFT}
 		case sdl.Scancode.D:
-			app.player.direction &~= Direction.RIGHT
+			app.player.direction -= {Direction.RIGHT}
 		case sdl.Scancode.W:
-			app.player.direction &~= Direction.FORWARD
+			app.player.direction -= {Direction.FORWARD}
 		case sdl.Scancode.S:
-			app.player.direction &~= Direction.BACKWARD
+			app.player.direction -= {Direction.BACKWARD}
 		case sdl.Scancode.H:
-			app.player.children[0].direction &~= Direction.LEFT
+			app.player.children[0].direction -= {Direction.LEFT}
 		case sdl.Scancode.L:
-			app.player.children[0].direction &~= Direction.RIGHT
+			app.player.children[0].direction -= {Direction.RIGHT}
 		}}
 }

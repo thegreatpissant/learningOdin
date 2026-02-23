@@ -31,9 +31,9 @@ AppInit :: proc "c" (
 	app := new(sup.App)
 	appState^ = app
 	app.title = "tanks"
-	app.width = 640
-	app.height = 480
-	app.scale = 10
+	app.width = 1280
+	app.height = 720
+	app.scale = 30
 	app.player.transform.rotation = 0
 	app.mainScene = new(sup.Scene)
 	app.mainScene.appEvent = MainSceneEvent
@@ -153,7 +153,7 @@ AppInit :: proc "c" (
 	app.player.transform.rotation = 0
 	app.player.transform.width = f32(app.tankBodyTexture.w)
 	app.player.transform.height = f32(app.tankBodyTexture.h)
-	app.player.direction = sup.Direction.NONE
+	app.player.direction += {sup.Direction.NONE}
 	app.player.texture = app.tankBodyTexture
 	app.player.transform.bodyOffset.x = f32(app.tankBodyTexture.w) * 0.5
 	app.player.transform.bodyOffset.y = f32(app.tankBodyTexture.h) * 0.5
@@ -161,10 +161,11 @@ AppInit :: proc "c" (
 		f32(app.tankBodyTexture.w) * 0.5,
 		f32(app.tankBodyTexture.h) * 0.5,
 	}
-	app.player.rigidbody.acceleration = 50
+	app.player.rigidbody.acceleration = 100
 	app.player.rigidbody.maxVelocity = 70
 	app.player.rigidbody.maxAngularVelocity = 40
-	app.player.rigidbody.angularAcceleration = 10
+	app.player.rigidbody.angularAcceleration = 100
+	app.player.rigidbody.angularDamping = 0.0005
 
 	turret := new(sup.Actor)
 	turret.parent = &app.player
@@ -182,10 +183,11 @@ AppInit :: proc "c" (
 	turret.rigidbody.velocity = 0
 	turret.rigidbody.maxVelocity = 40
 	turret.rigidbody.maxAngularVelocity = 40
-	turret.rigidbody.angularAcceleration = 10
+	turret.rigidbody.angularAcceleration = 100
+	turret.rigidbody.angularDamping = 0.01
 	turret.rigidbody.lockXAxis = true
 	turret.rigidbody.lockYAxis = true
-	turret.direction = sup.Direction.NONE
+	turret.direction += {sup.Direction.NONE}
 	append(&app.player.children, turret)
 
 	fmt.printfln("Init Player - DONE")
@@ -241,6 +243,11 @@ MainSceneEvent :: proc(app: ^sup.App, event: ^sdl.Event) -> sdl.AppResult {
 			fallthrough
 		case sdl.Scancode.ESCAPE:
 			return sdl.AppResult.SUCCESS
+		case sdl.Scancode.F:
+			sdl.SetWindowFullscreen(
+				app.window,
+				!(.FULLSCREEN in sdl.GetWindowFlags(app.window)),
+			)
 		}
 	}
 	sup.HandlePlayerEvent(event, app)
