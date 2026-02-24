@@ -30,12 +30,11 @@ App :: struct {
 }
 
 Transform :: struct {
-	position:       Vec2,
-	rotation:       f32,
-	rotationOffset: Vec2,
-	bodyOffset:     Vec2,
-	width:          f32,
-	height:         f32,
+	position: Vec2,
+	rotation: f32,
+	scale:    Vec2,
+	width:    f32,
+	height:   f32,
 }
 
 Rigidbody :: struct {
@@ -59,7 +58,7 @@ Actor :: struct {
 	transform: Transform,
 	collider:  sdl.Rect,
 	character: Character,
-	texture:   ^sdl.Texture,
+	texture:   Texture,
 	rigidbody: Rigidbody,
 	children:  [dynamic]^Actor,
 	parent:    ^Actor,
@@ -82,10 +81,15 @@ Character :: enum {
 	NPC    = 2,
 }
 
+Texture :: struct {
+	texture: ^sdl.Texture,
+	offset:  Vec2,
+}
+
 DOOR :: struct {
 	position:    sdl.FPoint,
 	destination: ^DOOR,
-	collider:    sdl.Rect,
+	collider:    GameRect,
 	scene:       ^Scene,
 	width:       f32,
 	height:      f32,
@@ -101,15 +105,18 @@ Scene :: struct {
 	appEvent:   proc(app: ^App, event: ^sdl.Event) -> sdl.AppResult,
 }
 
+GetScale :: proc(actor: ^Actor) -> Vec2 {
+	if actor.parent == nil {
+		return actor.transform.scale
+	}
+	return actor.transform.scale * GetScale(actor.parent)
+}
+
 GetPosition :: proc(actor: ^Actor) -> Vec2 {
 	if actor.parent == nil {
 		return actor.transform.position
 	}
-	parentPosition := GetPosition(actor.parent)
-	return Vec2 {
-		actor.transform.position.x + parentPosition.x,
-		actor.transform.position.y + parentPosition.y,
-	}
+	return actor.transform.position + GetPosition(actor.parent)
 }
 
 GetRotation :: proc(actor: ^Actor) -> f32 {
@@ -125,11 +132,11 @@ RenderBorderRect :: proc(
 	border: ^GameRect,
 ) {
 	sdl.SetRenderDrawColor(renderer, 0x00, 0xff, 0x00, 0x00)
-	fRect := sdl.FRect{border.x, border.y, border.w, border.h}
+	fRect := GameRect{border.x, border.y, border.w, border.h}
 	//  object position - camera position
 	fRect.x -= camera.x
 	fRect.y -= camera.y
-	sdl.RenderRect(renderer, &fRect)
+	sdl.RenderRect(renderer, (^sdl.FRect)(&fRect))
 }
 
 RenderTextureActor :: proc(
@@ -138,11 +145,12 @@ RenderTextureActor :: proc(
 	actor: ^Actor,
 ) {
 	position := GetPosition(actor)
-	target := sdl.FRect {
-		position.x - camera.x - actor.transform.bodyOffset.x,
-		position.y - camera.y - actor.transform.bodyOffset.y,
-		actor.transform.width,
-		actor.transform.height,
+	scale := GetScale(actor)
+	target := GameRect {
+		position.x - camera.x - (actor.texture.offset.x * scale.x),
+		position.y - camera.y - (actor.texture.offset.y * scale.y),
+		f32(actor.texture.texture.w) * scale.x,
+		f32(actor.texture.texture.h) * scale.y,
 	}
 
 	//  object position - camera position
@@ -150,11 +158,11 @@ RenderTextureActor :: proc(
 	//target.y -= camera.y
 	sdl.RenderTextureRotated(
 		renderer,
-		actor.texture,
+		actor.texture.texture,
 		nil,
-		&target,
+		(^sdl.FRect)(&target),
 		f64(GetRotation(actor)),
-		(^sdl.FPoint)(&actor.transform.rotationOffset),
+		(^sdl.FPoint)(&actor.texture.offset),
 		sdl.FlipMode.NONE,
 	)
 
@@ -169,7 +177,7 @@ RenderActor :: proc(
 	actor: ^Actor,
 ) {
 	sdl.SetRenderDrawColor(renderer, 0x00, 0xff, 0x00, 0x00)
-	fRect := sdl.FRect {
+	fRect := GameRect {
 		actor.transform.position.x,
 		actor.transform.position.y,
 		actor.transform.width,
@@ -178,7 +186,7 @@ RenderActor :: proc(
 	//  object position - camera position
 	fRect.x -= camera.x
 	fRect.y -= camera.y
-	sdl.RenderRect(renderer, &fRect)
+	sdl.RenderRect(renderer, (^sdl.FRect)(&fRect))
 }
 
 UpdateCamera :: proc(app: ^App) {
@@ -248,31 +256,37 @@ UpdateActor :: proc(actor: ^Actor, deltaTime: f32) {
 		actor.transform.rotation += actor.rigidbody.angularVelocity * Interval
 	}
 
-	actor.collider.w = i32(actor.transform.width)
-	actor.collider.h = i32(actor.transform.height)
-	actor.collider.x = i32(actor.transform.position.x)
-	actor.collider.y = i32(actor.transform.position.y)
+	scale := GetScale(actor)
+	actor.collider.w = actor.texture.texture.w * i32(scale.x)
+	actor.collider.h = actor.texture.texture.h * i32(scale.y)
+	actor.collider.x = i32(
+		actor.transform.position.x - actor.texture.offset.x * scale.x,
+	)
+	actor.collider.y = i32(
+		actor.transform.position.y - actor.texture.offset.y * scale.y,
+	)
 	for &child in actor.children {
 		UpdateActor(child, deltaTime)
 	}
 }
 
 HandleActorCollisions :: proc(actor: ^Actor, collider: ^GameRect) {
+	scale := GetScale(actor)
 	if actor.transform.position.x < collider.x {
 		actor.transform.position.x = collider.x
 	}
-	if actor.transform.position.x + actor.transform.height >
+	if actor.transform.position.x + f32(actor.texture.texture.w) * scale.x >
 	   collider.x + collider.w {
 		actor.transform.position.x =
-			collider.x + collider.w - actor.transform.width
+			collider.x + collider.w - f32(actor.texture.texture.w) * scale.x
 	}
 	if actor.transform.position.y < collider.y {
 		actor.transform.position.y = collider.y
 	}
-	if actor.transform.position.y + actor.transform.height >
+	if actor.transform.position.y + f32(actor.texture.texture.h) * scale.y >
 	   collider.y + collider.h {
 		actor.transform.position.y =
-			collider.y + collider.h - actor.transform.height
+			collider.y + collider.h - f32(actor.texture.texture.h) * scale.y
 	}
 }
 

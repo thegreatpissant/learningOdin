@@ -151,34 +151,27 @@ AppInit :: proc "c" (
 	app.player.transform.position.x = f32(app.width / 2)
 	app.player.transform.position.y = f32(app.height / 2)
 	app.player.transform.rotation = 0
-	app.player.transform.width = f32(app.tankBodyTexture.w)
-	app.player.transform.height = f32(app.tankBodyTexture.h)
 	app.player.direction += {sup.Direction.NONE}
-	app.player.texture = app.tankBodyTexture
-	app.player.transform.bodyOffset.x = f32(app.tankBodyTexture.w) * 0.5
-	app.player.transform.bodyOffset.y = f32(app.tankBodyTexture.h) * 0.5
-	app.player.transform.rotationOffset = sup.Vec2 {
-		f32(app.tankBodyTexture.w) * 0.5,
-		f32(app.tankBodyTexture.h) * 0.5,
-	}
+	app.player.texture.texture = app.tankBodyTexture
+	app.player.texture.offset.x = f32(app.tankBodyTexture.w) * 0.5
+	app.player.texture.offset.y = f32(app.tankBodyTexture.h) * 0.5
+	app.player.transform.scale = {1, 1}
 	app.player.rigidbody.acceleration = 100
 	app.player.rigidbody.maxVelocity = 70
 	app.player.rigidbody.maxAngularVelocity = 40
 	app.player.rigidbody.angularAcceleration = 100
-	app.player.rigidbody.angularDamping = 0.0005
+	app.player.rigidbody.angularDamping = 0.005
 
 	turret := new(sup.Actor)
 	turret.parent = &app.player
 	turret.character = sup.Character.PLAYER
-	turret.texture = app.tankTurretTexture
+	turret.texture.texture = app.tankTurretTexture
 	turret.transform.rotation = 0
 	turret.transform.position.x = 0
 	turret.transform.position.y = 0
-	turret.transform.bodyOffset.x = 1 * app.scale
-	turret.transform.bodyOffset.y = 1 * app.scale
-	turret.transform.width = f32(app.tankTurretTexture.w)
-	turret.transform.height = f32(app.tankTurretTexture.h)
-	turret.transform.rotationOffset = sup.Vec2{1 * app.scale, 1 * app.scale}
+	turret.texture.offset.x = 1 * app.scale
+	turret.texture.offset.y = 1 * app.scale
+	turret.transform.scale = {1, 1}
 	turret.rigidbody.acceleration = 0
 	turret.rigidbody.velocity = 0
 	turret.rigidbody.maxVelocity = 40
