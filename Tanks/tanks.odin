@@ -139,6 +139,12 @@ AppInit :: proc "c" (
 		fmt.printfln("Failed to create window and renderer %s", sdl.GetError())
 		return sdl.AppResult.FAILURE
 	}
+	sdl.SetRenderLogicalPresentation(
+		app.renderer,
+		app.width,
+		app.height,
+		sdl.RendererLogicalPresentation.STRETCH,
+	)
 	fmt.printfln("Initialize Window - DONE")
 
 	fmt.printfln("Init Textures")
