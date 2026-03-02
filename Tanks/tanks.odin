@@ -2,6 +2,7 @@ package tanks
 
 import "base:runtime"
 import "core:fmt"
+import "core:mem"
 import sup "sup"
 import sdl "vendor:sdl3"
 import sdl_ttf "vendor:sdl3/ttf"
@@ -29,10 +30,22 @@ AppInit :: proc "c" (
 
 	fmt.printfln("Initialize App")
 	app := new(sup.App)
+	if app == nil do return .FAILURE
 	appState^ = app
+
+	// Initialize tracking allocator directly in the heap-allocated app
+	mem.tracking_allocator_init(&app.track, context.allocator)
+	app.allocator = mem.tracking_allocator(&app.track)
+
+	// Create a context that uses our tracking allocator and save it
+	app._context = context
+	app._context.allocator = app.allocator
+	context = app._context
+
 	app.title = "tanks"
 	app.width = 1280
 	app.height = 720
+	app.targetFPS = 60
 	app.scale = 30
 	app.player.transform.rotation = 0
 	app.mainScene = new(sup.Scene)
@@ -121,9 +134,8 @@ AppInit :: proc "c" (
 	)
 	app.scene = app.mainScene
 
-	app.window = new(sdl.Window)
-	app.renderer = new(sdl.Renderer)
-	sup.SetTargetFPS(&app.fps, 60)
+	fmt.printfln("Target FPS: %v", app.targetFPS)
+	sup.SetTargetFPS(&app.fps, app.targetFPS)
 	app.fps.frameStartTicks = sdl.GetTicksNS()
 	fmt.printfln("Initialize App - DONE")
 
@@ -195,7 +207,7 @@ AppInit :: proc "c" (
 
 AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 	app := (^sup.App)(app)
-	context = runtime.default_context()
+	context = app._context
 
 	sup.StartFrame(&app.fps)
 
@@ -210,7 +222,7 @@ AppIterate :: proc "c" (app: rawptr) -> sdl.AppResult {
 
 AppEvent :: proc "c" (app: rawptr, event: ^sdl.Event) -> sdl.AppResult {
 	app := (^sup.App)(app)
-	context = runtime.default_context()
+	context = app._context
 	return app.scene.appEvent(app, event)
 }
 
@@ -255,15 +267,62 @@ MainSceneEvent :: proc(app: ^sup.App, event: ^sdl.Event) -> sdl.AppResult {
 
 AppQuit :: proc "c" (app: rawptr, result: sdl.AppResult) {
 	app := (^sup.App)(app)
-	context = runtime.default_context()
-	free(app)
+	context = app._context
+
+	fmt.println("Cleaning up")
+
+	// Cleanup scene and markers
+	delete(app.mainScene.markers)
+	free(app.mainScene)
+
+	// Cleanup textures
+	sdl.DestroyTexture(app.tankBodyTexture)
+	sdl.DestroyTexture(app.tankTurretTexture)
+
+	// Cleanup player and children (turret)
+	for child in app.player.children {
+		free(child)
+	}
+	delete(app.player.children)
+
+	sdl.DestroyRenderer(app.renderer)
+	sdl.DestroyWindow(app.window)
+
 	sdl_ttf.Quit()
 	sdl.Quit()
+
+	fmt.println("- Checking for memory leaks")
+	if len(app.track.allocation_map) > 0 {
+		for _, leak in app.track.allocation_map {
+			fmt.printfln("%v leaked %m", leak.location, leak.size)
+		}
+	} else {
+		fmt.println("- No leaks found!")
+	}
+	fmt.println("- Checking for bad frees")
+	if len(app.track.bad_free_array) > 0 {
+		for bad_free in app.track.bad_free_array {
+			fmt.printfln(
+				"%v allocation %p was freed badly",
+				bad_free.location,
+				bad_free.memory,
+			)
+		}
+	} else {
+		fmt.println("- No bad frees found!")
+	}
+
+	// Destroy tracker's internal maps before freeing app
+	mem.tracking_allocator_destroy(&app.track)
+
+	// Switch back to the default_context to free the app
+	context = runtime.default_context()
+	free(app)
+
+	fmt.printfln("Cleaning up - DONE")
 }
 
 main :: proc() {
-	renderer := new(sdl.Renderer)
-	renderer = nil
 	argv: cstring = ""
 	returnCode := sdl.EnterAppMainCallbacks(
 		0,

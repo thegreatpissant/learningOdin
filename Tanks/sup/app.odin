@@ -1,7 +1,9 @@
 package sup
 
+import "base:runtime"
 import fmt "core:fmt"
 import math "core:math"
+import "core:mem"
 import sdl "vendor:sdl3"
 
 Vec2 :: distinct [2]f32
@@ -19,6 +21,7 @@ App :: struct {
 	height:            i32,
 	window:            ^sdl.Window,
 	renderer:          ^sdl.Renderer,
+	targetFPS:         u64,
 	fps:               FPS,
 	scene:             ^Scene,
 	mainScene:         ^Scene,
@@ -27,6 +30,9 @@ App :: struct {
 	scale:             f32,
 	tankBodyTexture:   ^sdl.Texture,
 	tankTurretTexture: ^sdl.Texture,
+	allocator:         runtime.Allocator,
+	track:             mem.Tracking_Allocator,
+	_context:          runtime.Context,
 }
 
 Transform :: struct {

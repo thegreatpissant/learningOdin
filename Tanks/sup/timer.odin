@@ -82,7 +82,6 @@ FPS :: struct {
 
 SetTargetFPS :: proc(fps: ^FPS, targetFPS: u64) {
 	fps.targetFPS = targetFPS
-	fmt.printfln("Target FPS: %v", fps.targetFPS)
 	fps.targetFPSns = sdl.NS_PER_SECOND / targetFPS
 }
 
@@ -95,7 +94,7 @@ StartFrame :: proc(fps: ^FPS) {
 
 EndFrame :: proc(fps: ^FPS) {
 	elapsedTicks := sdl.GetTicksNS() - fps.frameStartTicks
-	delay := elapsedTicks > fps.targetFPSns ? 0 : fps.targetFPSns - elapsedTicks
+	delay :=
+		elapsedTicks > fps.targetFPSns ? 0 : fps.targetFPSns - elapsedTicks
 	sdl.DelayPrecise(delay)
 }
-

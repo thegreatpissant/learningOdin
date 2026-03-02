@@ -120,4 +120,15 @@ main :: proc() {
     }
 }
 ```
+
+## 5. File Permissions in `os.open`
+
+When using `os.open` with the `os.O_CREATE` flag, you should always provide a third argument to specify the file permissions (mode). Otherwise, it defaults to `0`, creating a file with no permissions (`----------`).
+
+**Example:**
+
+```odin
+// Correct: 0o644 (rw-r----) for a created file
+handle, err := os.open("log.txt", os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0o644)
+```
 This will print the file location and size of any unfreed memory allocations, making it much easier to pinpoint the source of a leak.
