@@ -16,3 +16,14 @@ RenderBoard :: proc(app: ^App) {
 		sdl.RenderRect(app.renderer, &rect)
 	}
 }
+
+RenderPlayer :: proc(app:^App) {
+	rc := RcFromPosition(app.playerPos)
+	offset: f32 = 20
+	x := offset + BlockSize * f32(rc.column)
+	y := offset + BlockSize * f32(rc.row)
+
+	sdl.SetRenderDrawColor(app.renderer, 0x55, 0xff, 0xff, 0x00)
+	sdl.RenderLine(app.renderer, x, y, x+BlockSize, y + BlockSize )
+	sdl.RenderLine(app.renderer, x, y+BlockSize, x + BlockSize, y)
+}

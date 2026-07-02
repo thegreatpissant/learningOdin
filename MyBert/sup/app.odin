@@ -24,7 +24,7 @@ App :: struct {
 	window:    ^sdl.Window,
 	renderer:  ^sdl.Renderer,
 	board:     Board,
-	playerPos: i32,
+	playerPos: int,
 }
 
 RcFromPosition :: proc(position: int) -> RC {
@@ -36,7 +36,7 @@ RcFromPosition :: proc(position: int) -> RC {
 }
 
 PositionFromRc :: proc(rc: RC) -> int {
-	return rc.column + ArrayLengthForRows(rc.row - 1)
+	return ArrayLengthForRows(rc.row) + rc.column
 }
 
 ArrayLengthForRows :: proc(numRows: int) -> int {
@@ -52,7 +52,7 @@ UpMoves :: proc(board: Board, rc: RC) -> [dynamic]RC {
 	if rc.column > 0 {
 		append(&moves, RC{row = row, column = rc.column - 1})
 	}
-	if rc.column <= rc.row {
+	if rc.column <= row {
 		append(&moves, RC{row = row, column = rc.column})
 	}
 
@@ -60,7 +60,7 @@ UpMoves :: proc(board: Board, rc: RC) -> [dynamic]RC {
 }
 
 DownMoves :: proc(board: Board, rc: RC) -> [dynamic]RC {
-	if rc.row >= board.levels {
+	if rc.row + 1 >= board.levels {
 		return {}
 	}
 	moves: [dynamic]RC
