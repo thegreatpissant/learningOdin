@@ -9,6 +9,8 @@ Directories:
 * scratch : Random items
 * sdlAppWithCallbacks : Example using SDL3 callbacks
 * TicTacToe : TicTacToe clone using SDL3
+* Tanks : InProgress vector based top down game 
+* MyBert : InProgress Q*bert clone
 
 Notes:
 * run each by abs path from root of repo. For example `odin run ./sdl/ex17/ex17.odin -file`
